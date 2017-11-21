@@ -1,0 +1,2 @@
+# genairics
+Airflow genomics pipelines
