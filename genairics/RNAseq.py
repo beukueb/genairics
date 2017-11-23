@@ -7,7 +7,7 @@
 Full pipeline starting from BaseSpace fastq project
 """
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator, python_operator
+from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
 import os
 
