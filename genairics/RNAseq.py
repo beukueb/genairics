@@ -13,7 +13,7 @@ from luigi.util import inherits
 from plumbum import local
 
 ## Luigi dummy file target dir
-ldft = tempfile.mkdtemp(prefix='/tmp/luigi',suffix='/')
+luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR')+'luigi',suffix='/')
 
 ## Tasks
 class basespaceData(luigi.Task):
@@ -27,58 +27,46 @@ class basespaceData(luigi.Task):
     # Set up temporary dummy output file
     # for every initiated task a new dummy is set up
     # this ensures that every new workflow run, will exectute all tasks
-    def __init__(self,*args,**kwargs):
-        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
-        super().__init__(*args,**kwargs)
-
     def output(self):
-        return luigi.LocalTarget(self.tmpdir+'/success')
+        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
         local['BaseSpaceRunDownloader.py']('-p',self.NSQrun,'-a', self.apitoken)
         pathlib.Path(self.output().path).touch()
     
 @inherits(basespaceData)
-class qualityCheck(ExternalProgramTask):
+class qualityCheck(luigi.Task):
     dirstructure = luigi.Parameter(default='multidir',
                                    description='dirstructure of datatdir: onedir or multidir')
 
     def requires(self):
         return basespaceData()
         
-    def __init__(self,*args,**kwargs):
-        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
-        super().__init__(*args,**kwargs)
-
     def output(self):
-        return luigi.LocalTarget(self.tmpdir+'/success')
+        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
         local['qualitycheck.sh'](self.NSQrun, self.dirstructure, self.datadir)
         pathlib.Path(self.output().path).touch()
 
 @inherits(qualityCheck)
-class alignTask(ExternalProgramTask):
+class alignTask(luigi.Task):
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
     genome = luigi.Parameter(default='RSEMgenomeGRCg38/human_ensembl',
                              description='reference genome to use')
 
     def requires(self):
         return qualityCheck()
-    
-    def __init__(self,*args,**kwargs):
-        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
-        super().__init__(*args,**kwargs)
 
     def output(self):
-        return luigi.LocalTarget(self.tmpdir+'/success')
+        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
         local['STARaligning.py'](self.NSQrun, self.dirstructure, self.datadir, self.suffix, self.genome)
         pathlib.Path(self.output().path).touch()
     
 @inherits(alignTask)
-class countTask(ExternalProgramTask):
+class countTask(luigi.Task):
     forwardprob = luigi.FloatParameter(default=0.5,
                                        description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
     PEND = luigi.BoolParameter(default=False,
@@ -86,31 +74,23 @@ class countTask(ExternalProgramTask):
 
     def requires(self):
         return qualityCheck()
-    
-    def __init__(self,*args,**kwargs):
-        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
-        super().__init__(*args,**kwargs)
 
     def output(self):
-        return luigi.LocalTarget(self.tmpdir+'/success')
+        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
         local['RSEMcounting.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.PEND)
         pathlib.Path(self.output().path).touch()
 
 @inherits(countTask)
-class diffexpTask(ExternalProgramTask):
+class diffexpTask(luigi.Task):
     design = luigi.Parameter(description='model design for differential expression analysis')
     
     def requires(self):
         return countTask()
     
-    def __init__(self,*args,**kwargs):
-        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
-        super().__init__(*args,**kwargs)
-
     def output(self):
-        return luigi.LocalTarget(self.tmpdir+'/success')
+        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
         local['simpleDEvoom.R'](self.NSQrun, self.datadir, self.design)
@@ -119,10 +99,24 @@ class diffexpTask(ExternalProgramTask):
 if __name__ == '__main__':
     import argparse
 
+    typeMapping = {
+        luigi.parameter.Parameter: str,
+        luigi.parameter.BoolParameter: bool,
+        luigi.parameter.FloatParameter: float
+    }
+
+    defaultMappings = {
+        'genome': 'RSEMgenomeGRCg38/human_ensembl'
+    }
+    
     parser = argparse.ArgumentParser(description='RNAseq processing pipeline.')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
-
+    for paran,param in countTask.get_params():
+        if paran in defaultMappings:
+            parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)], help=param.description)
+        else: parser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
+        
     if os.environ.get('PBS_JOBNAME'):
         #Retrieve arguments from qsub job environment
         #For testing:
@@ -137,26 +131,9 @@ if __name__ == '__main__':
         #Script started directly
         args = parser.parse_args()
 
-    # Set up DAG
-    default_args = {
-        'owner': os.environ.get('USER','airflow'),
-        'depends_on_past': False,
-        #'start_date': datetime(2017, 9, 1),
-        'email': ['christophe.vanneste@ugent.be'],
-        'email_on_failure': False,
-        'email_on_retry': False,
-        'retries': 1,
-        'retry_delay': timedelta(minutes=5),
-        # 'queue': 'bash_queue',
-        # 'pool': 'backfill',
-        # 'priority_weight': 10,
-        # 'end_date': datetime(2016, 1, 1),
-    }
+    #luigi.run()
+    #workflow = alignTask(datadir='/tmp',NSQrun='run1',apitoken='123abc',dirstructure='one')
+    workflow = countTask(**vars(args))
+    print(workflow)
 
-    # CLI options for pipeline are passed through params
-    dag = DAG('RNAseq', start_date = datetime(2017, 9, 1), default_args = default_args, schedule_interval=timedelta(1), params = vars(args))
-
-    dag >> qualityCheck >> alignTask >> countTask #>> diffexpTask
-    dag.run()
-
-    workflow = alignTask(datadir='/tmp',NSQrun='run1',apitoken='123abc',dirstructure='one')
+    print('[re]move ',luigitempdir)
