@@ -7,25 +7,37 @@
 Full pipeline starting from BaseSpace fastq project
 """
 from datetime import datetime, timedelta
-import luigi, os
+import luigi, os, tempfile, pathlib
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits
 from plumbum import local
 
+## Luigi dummy file target dir
+ldft = tempfile.mkdtemp(prefix='/tmp/luigi',suffix='/')
+
 ## Tasks
-class basespaceData(ExternalProgramTask):
+class basespaceData(luigi.Task):
     datadir = luigi.Parameter(description='directory that contains data in project folders')
     NSQrun = luigi.Parameter(description='project name')
-    apitoken = luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN')
+    apitoken = (
+        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN')
+        else luigi.Parameter(description='$BASESPACE_API_TOKEN')
+    )
 
-    def program_args(self):
-        return [
-            'sleep'
-            '60'#'BaseSpaceRunDownloader.py', '-p',
-            #self.NSQrun,
-            #'-a', self.apitoken
-            ]
+    # Set up temporary dummy output file
+    # for every initiated task a new dummy is set up
+    # this ensures that every new workflow run, will exectute all tasks
+    def __init__(self,*args,**kwargs):
+        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
+        super().__init__(*args,**kwargs)
 
+    def output(self):
+        return luigi.LocalTarget(self.tmpdir+'/success')
+
+    def run(self):
+        local['BaseSpaceRunDownloader.py']('-p',self.NSQrun,'-a', self.apitoken)
+        pathlib.Path(self.output().path).touch()
+    
 @inherits(basespaceData)
 class qualityCheck(ExternalProgramTask):
     dirstructure = luigi.Parameter(default='multidir',
@@ -34,11 +46,16 @@ class qualityCheck(ExternalProgramTask):
     def requires(self):
         return basespaceData()
         
-    def program_args(self):
-        return [
-            'sleep'
-            '60'#'qualitycheck.sh'
-        ]
+    def __init__(self,*args,**kwargs):
+        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
+        super().__init__(*args,**kwargs)
+
+    def output(self):
+        return luigi.LocalTarget(self.tmpdir+'/success')
+
+    def run(self):
+        local['qualitycheck.sh'](self.NSQrun, self.dirstructure, self.datadir)
+        pathlib.Path(self.output().path).touch()
 
 @inherits(qualityCheck)
 class alignTask(ExternalProgramTask):
@@ -49,12 +66,17 @@ class alignTask(ExternalProgramTask):
     def requires(self):
         return qualityCheck()
     
-    def program_args(self):
-        return [
-            'sleep',
-            60#'STARaligning.sh'
-        ]
+    def __init__(self,*args,**kwargs):
+        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
+        super().__init__(*args,**kwargs)
 
+    def output(self):
+        return luigi.LocalTarget(self.tmpdir+'/success')
+
+    def run(self):
+        local['STARaligning.py'](self.NSQrun, self.dirstructure, self.datadir, self.suffix, self.genome)
+        pathlib.Path(self.output().path).touch()
+    
 @inherits(alignTask)
 class countTask(ExternalProgramTask):
     forwardprob = luigi.FloatParameter(default=0.5,
@@ -65,11 +87,16 @@ class countTask(ExternalProgramTask):
     def requires(self):
         return qualityCheck()
     
-    def program_args(self):
-        return [
-            'sleep'
-            '60'#'RSEMcounting.sh'
-        ]    
+    def __init__(self,*args,**kwargs):
+        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
+        super().__init__(*args,**kwargs)
+
+    def output(self):
+        return luigi.LocalTarget(self.tmpdir+'/success')
+
+    def run(self):
+        local['RSEMcounting.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.PEND)
+        pathlib.Path(self.output().path).touch()
 
 @inherits(countTask)
 class diffexpTask(ExternalProgramTask):
@@ -78,11 +105,16 @@ class diffexpTask(ExternalProgramTask):
     def requires(self):
         return countTask()
     
-    def program_args(self):
-        return [
-            'sleep',
-            '60'#'simpleDEvoom.R'
-        ]
+    def __init__(self,*args,**kwargs):
+        self.tmpdir = tempfile.mkdtemp(prefix=ldft)
+        super().__init__(*args,**kwargs)
+
+    def output(self):
+        return luigi.LocalTarget(self.tmpdir+'/success')
+
+    def run(self):
+        local['simpleDEvoom.R'](self.NSQrun, self.datadir, self.design)
+        pathlib.Path(self.output().path).touch()
 
 if __name__ == '__main__':
     import argparse
@@ -126,3 +158,5 @@ if __name__ == '__main__':
 
     dag >> qualityCheck >> alignTask >> countTask #>> diffexpTask
     dag.run()
+
+    workflow = alignTask(datadir='/tmp',NSQrun='run1',apitoken='123abc',dirstructure='one')
