@@ -7,7 +7,7 @@
 Full pipeline starting from BaseSpace fastq project
 """
 from datetime import datetime, timedelta
-import luigi, os, tempfile, pathlib
+import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits
 from plumbum import local
@@ -28,10 +28,14 @@ class basespaceData(luigi.Task):
     # for every initiated task a new dummy is set up
     # this ensures that every new workflow run, will exectute all tasks
     def output(self):
-        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
+        return luigi.LocalTarget('{}/{}_downloadCompleted'.format(self.datadir,self.NSQrun))
 
     def run(self):
         local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.apitoken, '-d', self.datadir)
+        #Renaming download dir simply to project name
+        downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
+        if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
+        else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.NSQrun))
         pathlib.Path(self.output().path).touch()
     
 @inherits(basespaceData)
