@@ -13,7 +13,7 @@ from luigi.util import inherits
 from plumbum import local
 
 ## Luigi dummy file target dir
-luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR')+'luigi',suffix='/')
+luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
 
 ## Tasks
 class basespaceData(luigi.Task):
