@@ -6,40 +6,83 @@
 """
 Full pipeline starting from BaseSpace fastq project
 """
-from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
-import os
+import luigi, os
+from luigi.contrib.external_program import ExternalProgramTask
+from luigi.util import inherits
+from plumbum import local
 
 ## Tasks
-basespaceData = BashOperator(
-    task_id='basespace_data',
-    bash_command='''
-sleep 60
-cd {{ params.datadir }}
-BaseSpaceRunDownloader.py -p {{ params.NSQrun }} -a $BASESPACE_API_TOKEN
-''',
-)
+class basespaceData(ExternalProgramTask):
+    datadir = luigi.Parameter(description='directory that contains data in project folders')
+    NSQrun = luigi.Parameter(description='project name')
+    apitoken = luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN')
 
-qualityCheck = BashOperator(
-    task_id='check_quality',
-    bash_command='qualitycheck.sh {{ params.NSQrun }} {{ params.dirstructure }} {{ params.datadir }}'
-)
+    def program_args(self):
+        return [
+            'sleep'
+            '60'#'BaseSpaceRunDownloader.py', '-p',
+            #self.NSQrun,
+            #'-a', self.apitoken
+            ]
 
-alignTask = BashOperator(
-    task_id='align_reads',
-    bash_command='STARaligning.sh {{ params.NSQrun }} {{ params.dirstructure }} {{ params.datadir }} {{ params.suffix }} {{ params.genome }}'
-)
+@inherits(basespaceData)
+class qualityCheck(ExternalProgramTask):
+    dirstructure = luigi.Parameter(default='multidir',
+                                   description='dirstructure of datatdir: onedir or multidir')
 
-countTask = BashOperator(
-    task_id='count_reads',
-    bash_command='STARaligning.sh {{ params.NSQrun }} {{ params.datadir }} {{ params.genome }} {{ params.forwardprob }} {{ params.PEND }}'
-)
+    def requires(self):
+        return basespaceData()
+        
+    def program_args(self):
+        return [
+            'sleep'
+            '60'#'qualitycheck.sh'
+        ]
 
-diffexpTask = BashOperator(
-    task_id='differential_expression',
-    bash_command='simpleDEvoom.R {{ params.NSQrun }} {{ params.datadir }} {{ params.design }}'
-)
+@inherits(qualityCheck)
+class alignTask(ExternalProgramTask):
+    suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
+    genome = luigi.Parameter(default='RSEMgenomeGRCg38/human_ensembl',
+                             description='reference genome to use')
+
+    def requires(self):
+        return qualityCheck()
+    
+    def program_args(self):
+        return [
+            'sleep',
+            60#'STARaligning.sh'
+        ]
+
+@inherits(alignTask)
+class countTask(ExternalProgramTask):
+    forwardprob = luigi.FloatParameter(default=0.5,
+                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
+    PEND = luigi.BoolParameter(default=False,
+                               description='paired end sequencing reads')
+
+    def requires(self):
+        return qualityCheck()
+    
+    def program_args(self):
+        return [
+            'sleep'
+            '60'#'RSEMcounting.sh'
+        ]    
+
+@inherits(countTask)
+class diffexpTask(ExternalProgramTask):
+    design = luigi.Parameter(description='model design for differential expression analysis')
+    
+    def requires(self):
+        return countTask()
+    
+    def program_args(self):
+        return [
+            'sleep',
+            '60'#'simpleDEvoom.R'
+        ]
 
 if __name__ == '__main__':
     import argparse
@@ -47,19 +90,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RNAseq processing pipeline.')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
-    parser.add_argument('datadir', type=str, help='directory that contains data in project folders')
-    parser.add_argument('NSQrun', type=str, help='project name')
-    parser.add_argument('--dirstructure', type=str, default=os.environ.get('dirstructure','multidir'),
-                        help='dirstructure of datatdir: onedir or multidir')
-    parser.add_argument('--genome', type=str, default=os.environ.get('genome','RSEMgenomeGRCg38/human_ensembl') ,
-                        help='reference genome to use')
-    parser.add_argument('--suffix', type=str, default=os.environ.get('suffix',None),
-                        help='use when preparing for xenome filtering')
-    parser.add_argument('--forwardprob', type=float, default=float(os.environ.get('forwardprob',0.5)),
-                        help='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
-    parser.add_argument('--PEND', action='store_true', help='paired end sequencing reads')
-    parser.add_argument('--design', type=str, default=os.environ.get('design',None),
-                        help='model design for differential expression analysis')
 
     if os.environ.get('PBS_JOBNAME'):
         #Retrieve arguments from qsub job environment
