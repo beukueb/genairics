@@ -28,7 +28,7 @@ class basespaceData(luigi.Task):
     # for every initiated task a new dummy is set up
     # this ensures that every new workflow run, will exectute all tasks
     def output(self):
-        return luigi.LocalTarget('{}/{}_downloadCompleted'.format(self.datadir,self.NSQrun))
+        return luigi.LocalTarget('{}/../results/{}/plumbing/1_downloadCompleted'.format(self.datadir,self.NSQrun))
 
     def run(self):
         local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.apitoken, '-d', self.datadir)
@@ -36,15 +36,40 @@ class basespaceData(luigi.Task):
         downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
         if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
         else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.NSQrun))
+        os.mkdir('{}/../results/{}'.format(self.datadir,self.NSQrun))
+        os.mkdir('{}/../results/{}/plumbing'.format(self.datadir,self.NSQrun))
         pathlib.Path(self.output().path).touch()
-    
+
 @inherits(basespaceData)
-class qualityCheck(luigi.Task):
+class mergeFASTQs(luigi.Task):
+    """
+    Merge fastqs if one sample contains more than one fastq
+    """
     dirstructure = luigi.Parameter(default='multidir',
                                    description='dirstructure of datatdir: onedir or multidir')
-
     def requires(self):
         return basespaceData()
+        
+    def output(self):
+        return luigi.LocalTarget('{}/../results/{}/plumbing/2_mergeFASTQs'.format(self.datadir,self.NSQrun))
+
+    def run(self):
+        if self.dirstructure == 'multidir':
+            outdir = '{}/../results/{}/mergedFASTQs/'.format(self.datadir,self.NSQrun)
+            os.mkdir(outdir)
+            dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.NSQrun)).split()
+            for d in dirsFASTQs:
+                (local['ls'] >> (self.output().path + '_log'))('-lh','{}/{}/{}'.format(self.datadir,self.NSQrun,d))
+                (local['cat'] > outdir+d+'.fastq.gz')(
+                    *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.NSQrun,d))
+                )
+        pathlib.Path(self.output().path).touch()
+
+@inherits(mergeFASTQs)
+class qualityCheck(luigi.Task):
+
+    def requires(self):
+        return mergeFASTQs()
         
     def output(self):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
