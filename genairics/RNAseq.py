@@ -31,7 +31,7 @@ class basespaceData(luigi.Task):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
 
     def run(self):
-        local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.apitoken, '-d', self.datadir+'/'+self.NSQrun)
+        local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.apitoken, '-d', self.datadir)
         pathlib.Path(self.output().path).touch()
     
 @inherits(basespaceData)
