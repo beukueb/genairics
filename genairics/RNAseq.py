@@ -13,7 +13,7 @@ from luigi.util import inherits
 from plumbum import local
 
 ## Luigi dummy file target dir
-luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
+#luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
 
 ## Tasks
 class basespaceData(luigi.Task):
@@ -55,7 +55,7 @@ class mergeFASTQs(luigi.Task):
 
     def run(self):
         if self.dirstructure == 'multidir':
-            outdir = '{}/../results/{}/mergedFASTQs/'.format(self.datadir,self.NSQrun)
+            outdir = '{}/../results/{}/fastqs/'.format(self.datadir,self.NSQrun)
             os.mkdir(outdir)
             dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.NSQrun)).split()
             for d in dirsFASTQs:
@@ -74,10 +74,28 @@ class qualityCheck(luigi.Task):
         return self.clone_parent()
         
     def output(self):
-        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
+        return luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
 
     def run(self):
-        local['qualitycheck.sh'](self.NSQrun, self.dirstructure, self.datadir)
+        local['qualitycheck.sh'](self.NSQrun, self.datadir)
+#        for fqcfile in $(ls $outdir/*.zip)
+#do
+#    fqcdir=${fqcfile%.zip}
+#    unzip -d . $fqcfile ${fqcdir##*/}/summary.txt
+#    python - ${fqcdir##*/}/summary.txt <<EOF
+#import sys,os
+#import pandas as pd
+#summ = pd.read_csv(sys.argv[1],sep='\t',header=None)
+#if not os.path.exists('qcsummary.csv'):
+#  with open('qcsummary.csv','wt') as f:
+#    f.write('\t'+'\t'.join(list(summ[1]))+'\n')
+#with open('qcsummary.csv','at') as f:
+#  f.write(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
+#EOF
+#    rm -rf ${fqcdir##*/}
+#done
+#mv qcsummary.csv $outdir/
+
         pathlib.Path(self.output().path).touch()
 
 @inherits(qualityCheck)
@@ -85,32 +103,78 @@ class alignTask(luigi.Task):
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
     genome = luigi.Parameter(default='RSEMgenomeGRCg38/human_ensembl',
                              description='reference genome to use')
-
-    def requires(self):
-        return self.clone_parent()
-
-    def output(self):
-        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
-
-    def run(self):
-        local['STARaligning.py'](self.NSQrun, self.dirstructure, self.datadir, self.suffix, self.genome)
-        pathlib.Path(self.output().path).touch()
-    
-@inherits(alignTask)
-class countTask(luigi.Task):
-    forwardprob = luigi.FloatParameter(default=0.5,
-                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
-    PEND = luigi.BoolParameter(default=False,
+    pairedEnd = luigi.BoolParameter(default=False,
                                description='paired end sequencing reads')
 
     def requires(self):
         return self.clone_parent()
 
     def output(self):
-        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
+        return luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
 
     def run(self):
-        local['RSEMcounting.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.PEND)
+        local['STARaligning.py'](self.NSQrun, self.datadir, self.suffix, self.genome, self.pairedEnd)
+# cd $VSC_DATA_VO_USER/results/${NSQ_Run}_results/
+# if [ "$VSC_HOME" ]; then module load pandas; fi
+# python - <<EOF
+# #Process STAR counts
+# from glob import glob
+# import pandas as pd
+# import os
+
+# amb = []
+# counts = []
+# amb_annot = counts_annot = None
+# samples = []
+# for dir in glob('{}/results/{}_results/alignmentResults/*'.format(os.environ['VSC_DATA_VO_USER'],
+#                                                                   os.environ['NSQ_Run'])):
+#     f = open(dir+'/ReadsPerGene.out.tab')
+#     f = f.readlines()
+#     amb.append([int(l.split()[1]) for l in f[:4]])
+#     if not amb_annot: amb_annot = [l.split()[0] for l in f[:4]]
+#     f = f[4:]
+#     if not counts_annot: counts_annot = [l.split()[0] for l in f]
+#     else:
+#         assert counts_annot == [l.split()[0] for l in f]
+#     counts.append([int(l.split()[1]) for l in f])
+#     samples.append(dir[dir.rindex('/')+1:])
+# counts_df = pd.DataFrame(counts,columns=counts_annot,index=samples).transpose()
+# counts_df.to_csv('STARcounts.csv')
+# EOF
+
+        pathlib.Path(self.output().path).touch()
+    
+@inherits(alignTask)
+class countTask(luigi.Task):
+    forwardprob = luigi.FloatParameter(default=0.5,
+                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
+
+    def requires(self):
+        return self.clone_parent()
+
+    def output(self):
+        return luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
+
+    def run(self):
+        local['RSEMcounting.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.pairedEnd)
+# module load pandas
+# python - <<EOF
+# #Process RSEM counts
+# from glob import glob
+# import pandas as pd
+# import os
+
+# counts = {}
+# samples = []
+# for gfile in glob('{}/results/{}_results/countResults/*.genes.results'.format(os.environ['VOU'],
+#                                                                               os.environ['NSQ_Run'])):
+#     sdf = pd.read_table(gfile,index_col=0)
+#     counts[gfile[gfile.rindex('/')+1:-14]] = sdf.expected_count
+ 
+# counts_df = pd.DataFrame(counts)
+# counts_df.to_csv('{}_RSEMcounts.csv'.format(os.environ['NSQ_Run']))
+# EOF
+
         pathlib.Path(self.output().path).touch()
 
 @inherits(countTask)
@@ -121,7 +185,7 @@ class diffexpTask(luigi.Task):
         return self.clone_parent()
     
     def output(self):
-        return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
+        return luigi.LocalTarget('{}/../results/{}/plumbing/6_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
 
     def run(self):
         local['simpleDEvoom.R'](self.NSQrun, self.datadir, self.design)
@@ -148,7 +212,7 @@ if __name__ == '__main__':
             parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)], help=param.description)
         else: parser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
-    if os.environ.get('PBS_JOBNAME'):
+    if os.environ.get('LUIGI_PBS_ENV'):
         #Retrieve arguments from qsub job environment
         #For testing:
         # os.environ.setdefault('datadir','testdir')
@@ -162,9 +226,8 @@ if __name__ == '__main__':
         #Script started directly
         args = parser.parse_args()
 
-    #luigi.run()
-    #workflow = alignTask(datadir='/tmp',NSQrun='run1',apitoken='123abc',dirstructure='one')
     workflow = countTask(**vars(args))
     print(workflow)
+    workflow.run()
 
-    print('[re]move ',luigitempdir)
+    #print('[re]move ',luigitempdir)

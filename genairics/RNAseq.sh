@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 #PBS -N RNAseqPipeline
 #PBS -l nodes=1:ppn=16
 #PBS -l walltime=72:00:00
@@ -6,4 +6,8 @@
 
 module load pandas
 python $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py --datadir $DATADIR --NSQrun $NSQRUN \
-                 --apitoken $APITOKEN --dirstructure $DIRSTRUCTURE --genome $GENOME --forwardprob $FORWARDPROB] --PEND $PEND
+       --apitoken $APITOKEN --forwardprob $FORWARDPROB
+
+#Not used
+#--genome $GENOME
+#--dirstructure $DIRSTRUCTURE --pairedEnd $pairedEnd
