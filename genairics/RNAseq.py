@@ -244,6 +244,7 @@ if __name__ == '__main__':
     workflow = RNAseqWorkflow(**vars(args))
     print(workflow)
     for task in workflow.requires():
+        print(task)
         task.run()
 
     #print('[re]move ',luigitempdir)
