@@ -63,6 +63,8 @@ class mergeFASTQs(luigi.Task):
                 (local['cat'] > outdir+d+'.fastq.gz')(
                     *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.NSQrun,d))
                 )
+            os.rename('{}/{}_original_FASTQs'.format(self.datadir,self.NSQrun),'{}/{}'.format(self.datadir,self.NSQrun))
+            os.symlink(outdir,'{}/{}'.format(self.datadir,self.NSQrun), target_is_directory = True)
         pathlib.Path(self.output().path).touch()
 
 @inherits(mergeFASTQs)
