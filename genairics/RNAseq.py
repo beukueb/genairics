@@ -15,6 +15,9 @@ from plumbum import local
 ## Luigi dummy file target dir
 #luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
 
+## Default settings
+defaultMappings = {}
+
 ## Tasks
 class basespaceData(luigi.Task):
     datadir = luigi.Parameter(description='directory that contains data in project folders')
@@ -47,6 +50,8 @@ class mergeFASTQs(luigi.Task):
     """
     dirstructure = luigi.Parameter(default='multidir',
                                    description='dirstructure of datatdir: onedir or multidir')
+    defaultMappings['dirstructure'] = 'multidir'
+    
     def requires(self):
         return self.clone_parent() #or self.clone(basespaceData)
         
@@ -101,11 +106,15 @@ class qualityCheck(luigi.Task):
 @inherits(qualityCheck)
 class alignTask(luigi.Task):
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
+    defaultMappings['suffix'] = ''
     genome = luigi.Parameter(default='RSEMgenomeGRCg38/human_ensembl',
                              description='reference genome to use')
+    defaultMappings['genome'] = 'RSEMgenomeGRCg38/human_ensembl'
     pairedEnd = luigi.BoolParameter(default=False,
                                description='paired end sequencing reads')
 
+    defaultMappings['pairedEnd'] = False
+    
     def requires(self):
         return self.clone_parent()
 
@@ -148,7 +157,8 @@ class alignTask(luigi.Task):
 class countTask(luigi.Task):
     forwardprob = luigi.FloatParameter(default=0.5,
                                        description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
-
+    defaultMappings['forwardprob'] = 0.5
+    
     def requires(self):
         return self.clone_parent()
 
@@ -198,10 +208,6 @@ if __name__ == '__main__':
         luigi.parameter.Parameter: str,
         luigi.parameter.BoolParameter: bool,
         luigi.parameter.FloatParameter: float
-    }
-
-    defaultMappings = {
-        'genome': 'RSEMgenomeGRCg38/human_ensembl'
     }
     
     parser = argparse.ArgumentParser(description='RNAseq processing pipeline.')
