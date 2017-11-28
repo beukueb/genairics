@@ -245,6 +245,6 @@ if __name__ == '__main__':
     print(workflow)
     for task in workflow.requires():
         print(task)
-        task.run()
+        if not task.complete(): task.run()
 
     #print('[re]move ',luigitempdir)
