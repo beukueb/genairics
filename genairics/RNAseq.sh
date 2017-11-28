@@ -5,9 +5,12 @@
 #PBS -m be
 
 module load pandas
-python $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py --datadir $DATADIR --NSQrun $NSQRUN \
-       --apitoken $APITOKEN --forwardprob $FORWARDPROB
+python $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py --datadir $DATADIR --NSQrun $NSQrun \
+       --apitoken $$BASESPACE_API_TOKEN --forwardprob $FORWARDPROB
 
-#Not used
+# Not used
 #--genome $GENOME
 #--dirstructure $DIRSTRUCTURE --pairedEnd $pairedEnd
+
+# Example run
+# qsub -v DATADIR=$VSC_DATA_VO_USER/data,NSQrun=NSQ_Run355,FORWARDPROB=0 $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.sh
