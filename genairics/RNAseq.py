@@ -166,7 +166,7 @@ class countTask(luigi.Task):
         return luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
 
     def run(self):
-        local['RSEMcounting.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.pairedEnd)
+        local['RSEMcounts.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.pairedEnd)
 # module load pandas
 # python - <<EOF
 # #Process RSEM counts
@@ -201,6 +201,15 @@ class diffexpTask(luigi.Task):
         local['simpleDEvoom.R'](self.NSQrun, self.datadir, self.design)
         pathlib.Path(self.output().path).touch()
 
+@inherits(countTask)
+class RNAseqWorkflow(luigi.WrapperTask):
+    def requires(self):
+        yield self.clone(basespaceData)
+        yield self.clone(mergeFASTQs)
+        yield self.clone(qualityCheck)
+        yield self.clone(alignTask)
+        yield self.clone(countTask)
+        
 if __name__ == '__main__':
     import argparse
 
@@ -232,8 +241,9 @@ if __name__ == '__main__':
         #Script started directly
         args = parser.parse_args()
 
-    workflow = countTask(**vars(args))
+    workflow = RNAseqWorkflow(**vars(args))
     print(workflow)
-    workflow.run()
+    for task in workflow.requires():
+        task.run()
 
     #print('[re]move ',luigitempdir)
