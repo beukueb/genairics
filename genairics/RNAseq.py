@@ -48,7 +48,7 @@ class mergeFASTQs(luigi.Task):
     dirstructure = luigi.Parameter(default='multidir',
                                    description='dirstructure of datatdir: onedir or multidir')
     def requires(self):
-        return basespaceData()
+        return self.clone_parent() #or self.clone(basespaceData)
         
     def output(self):
         return luigi.LocalTarget('{}/../results/{}/plumbing/2_mergeFASTQs'.format(self.datadir,self.NSQrun))
@@ -71,7 +71,7 @@ class mergeFASTQs(luigi.Task):
 class qualityCheck(luigi.Task):
 
     def requires(self):
-        return mergeFASTQs()
+        return self.clone_parent()
         
     def output(self):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
@@ -87,7 +87,7 @@ class alignTask(luigi.Task):
                              description='reference genome to use')
 
     def requires(self):
-        return qualityCheck()
+        return self.clone_parent()
 
     def output(self):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
@@ -104,7 +104,7 @@ class countTask(luigi.Task):
                                description='paired end sequencing reads')
 
     def requires(self):
-        return qualityCheck()
+        return self.clone_parent()
 
     def output(self):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
@@ -118,7 +118,7 @@ class diffexpTask(luigi.Task):
     design = luigi.Parameter(description='model design for differential expression analysis')
     
     def requires(self):
-        return countTask()
+        return self.clone_parent()
     
     def output(self):
         return luigi.LocalTarget(luigitempdir+self.task_id+'_success')
