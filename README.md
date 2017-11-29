@@ -1,5 +1,5 @@
 # genairics
-Airflow genomics pipelines
+GENeric AIRtight omICS pipelines
 
 ## Prepare your HPC account
 ### add to your ~/.bashrc =>
