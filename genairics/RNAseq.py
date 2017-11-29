@@ -11,6 +11,7 @@ import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits
 from plumbum import local
+import pandas as pd
 
 ## Luigi dummy file target dir
 #luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
@@ -41,6 +42,7 @@ class basespaceData(luigi.Task):
         else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.NSQrun))
         os.mkdir('{}/../results/{}'.format(self.datadir,self.NSQrun))
         os.mkdir('{}/../results/{}/plumbing'.format(self.datadir,self.NSQrun))
+        os.mkdir('{}/../results/{}/summaries'.format(self.datadir,self.NSQrun))
         pathlib.Path(self.output().path).touch()
 
 @inherits(basespaceData)
@@ -79,29 +81,27 @@ class qualityCheck(luigi.Task):
         return self.clone_parent()
         
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/QCresults'.format(self.datadir,self.NSQrun)),
+            luigi.LocalTarget('{}/../results/{}/summaries/qcsummary.csv'.format(self.datadir,self.NSQrun))
+        )
 
     def run(self):
+        import zipfile
+        from io import TextIOWrapper
+        
         local['qualitycheck.sh'](self.NSQrun, self.datadir)
-#        for fqcfile in $(ls $outdir/*.zip)
-#do
-#    fqcdir=${fqcfile%.zip}
-#    unzip -d . $fqcfile ${fqcdir##*/}/summary.txt
-#    python - ${fqcdir##*/}/summary.txt <<EOF
-#import sys,os
-#import pandas as pd
-#summ = pd.read_csv(sys.argv[1],sep='\t',header=None)
-#if not os.path.exists('qcsummary.csv'):
-#  with open('qcsummary.csv','wt') as f:
-#    f.write('\t'+'\t'.join(list(summ[1]))+'\n')
-#with open('qcsummary.csv','at') as f:
-#  f.write(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
-#EOF
-#    rm -rf ${fqcdir##*/}
-#done
-#mv qcsummary.csv $outdir/
-
-        pathlib.Path(self.output().path).touch()
+        qclines = []
+        for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
+            zf = zipfile.ZipFile(fqcfile)
+            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
+                ft = TextIOWrapper(f)
+                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
+                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
+        with self.output()[2].open('w') as outfile:
+            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
+        pathlib.Path(self.output()[0].path).touch()
 
 @inherits(qualityCheck)
 class alignTask(luigi.Task):
@@ -119,39 +119,36 @@ class alignTask(luigi.Task):
         return self.clone_parent()
 
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/alignmentResults'.format(self.datadir,self.NSQrun)),
+            luigi.LocalTarget('{}/../results/{}/summaries/STARcounts.csv'.format(self.datadir,self.NSQrun))
+        )
 
     def run(self):
-        local['STARaligning.py'](self.NSQrun, self.datadir, self.suffix, self.genome, self.pairedEnd)
-# cd $VSC_DATA_VO_USER/results/${NSQ_Run}_results/
-# if [ "$VSC_HOME" ]; then module load pandas; fi
-# python - <<EOF
-# #Process STAR counts
-# from glob import glob
-# import pandas as pd
-# import os
+        local['STARaligning.sh'](self.NSQrun, self.datadir, self.suffix, self.genome, self.pairedEnd)
 
-# amb = []
-# counts = []
-# amb_annot = counts_annot = None
-# samples = []
-# for dir in glob('{}/results/{}_results/alignmentResults/*'.format(os.environ['VSC_DATA_VO_USER'],
-#                                                                   os.environ['NSQ_Run'])):
-#     f = open(dir+'/ReadsPerGene.out.tab')
-#     f = f.readlines()
-#     amb.append([int(l.split()[1]) for l in f[:4]])
-#     if not amb_annot: amb_annot = [l.split()[0] for l in f[:4]]
-#     f = f[4:]
-#     if not counts_annot: counts_annot = [l.split()[0] for l in f]
-#     else:
-#         assert counts_annot == [l.split()[0] for l in f]
-#     counts.append([int(l.split()[1]) for l in f])
-#     samples.append(dir[dir.rindex('/')+1:])
-# counts_df = pd.DataFrame(counts,columns=counts_annot,index=samples).transpose()
-# counts_df.to_csv('STARcounts.csv')
-# EOF
-
-        pathlib.Path(self.output().path).touch()
+        #Process STAR counts
+        amb = []
+        counts = []
+        amb_annot = counts_annot = None
+        samples = []
+        for dir in glob.glob(self.output()[1]+'/*'):
+            f = open(dir+'/ReadsPerGene.out.tab')
+            f = f.readlines()
+            amb.append([int(l.split()[1]) for l in f[:4]])
+            if not amb_annot: amb_annot = [l.split()[0] for l in f[:4]]
+            f = f[4:]
+            if not counts_annot: counts_annot = [l.split()[0] for l in f]
+            else:
+                assert counts_annot == [l.split()[0] for l in f]
+            counts.append([int(l.split()[1]) for l in f])
+            samples.append(dir[dir.rindex('/')+1:])
+        # Alignment summary file
+        counts_df = pd.DataFrame(counts,columns=counts_annot,index=samples).transpose()
+        counts_df.to_csv(self.output()[2].path)
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
     
 @inherits(alignTask)
 class countTask(luigi.Task):
@@ -163,28 +160,25 @@ class countTask(luigi.Task):
         return self.clone_parent()
 
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/countResults'.format(self.datadir,self.NSQrun)),
+            luigi.LocalTarget('{}/../results/{}/summaries/RSEMcounts.csv'.format(self.datadir,self.NSQrun))
+        )
 
     def run(self):
         local['RSEMcounts.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.pairedEnd)
-# module load pandas
-# python - <<EOF
-# #Process RSEM counts
-# from glob import glob
-# import pandas as pd
-# import os
+        # Process RSEM counts
+        counts = {}
+        samples = []
+        for gfile in glob.glob(self.output()[1]+'/*.genes.results'):
+            sdf = pd.read_table(gfile,index_col=0)
+            counts[gfile[gfile.rindex('/')+1:-14]] = sdf.expected_count
 
-# counts = {}
-# samples = []
-# for gfile in glob('{}/results/{}_results/countResults/*.genes.results'.format(os.environ['VOU'],
-#                                                                               os.environ['NSQ_Run'])):
-#     sdf = pd.read_table(gfile,index_col=0)
-#     counts[gfile[gfile.rindex('/')+1:-14]] = sdf.expected_count
- 
-# counts_df = pd.DataFrame(counts)
-# counts_df.to_csv('{}_RSEMcounts.csv'.format(os.environ['NSQ_Run']))
-# EOF
-
+        # Counts summary file
+        counts_df = pd.DataFrame(counts)
+        counts_df.to_csv(self.output()[2].path)
+        # Check point
         pathlib.Path(self.output().path).touch()
 
 @inherits(countTask)
