@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #PBS -N RNAseqPipeline
 #PBS -l nodes=1:ppn=16
 #PBS -l walltime=72:00:00
@@ -133,7 +133,7 @@ class alignTask(luigi.Task):
         counts = []
         amb_annot = counts_annot = None
         samples = []
-        for dir in glob.glob(self.output()[1]+'/*'):
+        for dir in glob.glob(self.output()[1].path+'/*'):
             f = open(dir+'/ReadsPerGene.out.tab')
             f = f.readlines()
             amb.append([int(l.split()[1]) for l in f[:4]])
@@ -171,7 +171,7 @@ class countTask(luigi.Task):
         # Process RSEM counts
         counts = {}
         samples = []
-        for gfile in glob.glob(self.output()[1]+'/*.genes.results'):
+        for gfile in glob.glob(self.output()[1].path+'/*.genes.results'):
             sdf = pd.read_table(gfile,index_col=0)
             counts[gfile[gfile.rindex('/')+1:-14]] = sdf.expected_count
 

@@ -6,7 +6,7 @@
 
 module load pandas
 python $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py --datadir $DATADIR --NSQrun $NSQrun \
-       --apitoken $$BASESPACE_API_TOKEN --forwardprob $FORWARDPROB
+       --apitoken $BASESPACE_API_TOKEN --forwardprob $FORWARDPROB
 
 # Not used
 #--genome $GENOME
