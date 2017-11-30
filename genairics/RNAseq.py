@@ -107,7 +107,7 @@ class qualityCheck(luigi.Task):
 class alignTask(luigi.Task):
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
     defaultMappings['suffix'] = ''
-    genome = luigi.Parameter(default='RSEMgenomeGRCg38/human_ensembl',
+    genome = luigi.Parameter(default='RSEMgenomeGRCg38',
                              description='reference genome to use')
     defaultMappings['genome'] = 'RSEMgenomeGRCg38/human_ensembl'
     pairedEnd = luigi.BoolParameter(default=False,
@@ -167,7 +167,7 @@ class countTask(luigi.Task):
         )
 
     def run(self):
-        local['RSEMcounts.sh'](self.NSQrun, self.datadir, self.genome, self.forwardprob, self.pairedEnd)
+        local['RSEMcounts.sh'](self.NSQrun, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd)
         # Process RSEM counts
         counts = {}
         samples = []
