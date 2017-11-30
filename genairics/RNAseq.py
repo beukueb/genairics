@@ -179,7 +179,7 @@ class countTask(luigi.Task):
         counts_df = pd.DataFrame(counts)
         counts_df.to_csv(self.output()[2].path)
         # Check point
-        pathlib.Path(self.output().path).touch()
+        pathlib.Path(self.output().path[0]).touch()
 
 @inherits(countTask)
 class diffexpTask(luigi.Task):
