@@ -109,7 +109,7 @@ class alignTask(luigi.Task):
     defaultMappings['suffix'] = ''
     genome = luigi.Parameter(default='RSEMgenomeGRCg38',
                              description='reference genome to use')
-    defaultMappings['genome'] = 'RSEMgenomeGRCg38/human_ensembl'
+    defaultMappings['genome'] = 'RSEMgenomeGRCg38'
     pairedEnd = luigi.BoolParameter(default=False,
                                description='paired end sequencing reads')
 
