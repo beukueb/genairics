@@ -231,7 +231,7 @@ if __name__ == '__main__':
         for paran,param in RNAseqWorkflow.get_params():
             if paran in os.environ:
                 args += ['--'+paran, os.environ[paran]]
-        args = parser.parse_args(' '.join(args))
+        args = parser.parse_args(args)
         print('Arguments retrieved from environment:',args)
     else:
         #Script started directly
