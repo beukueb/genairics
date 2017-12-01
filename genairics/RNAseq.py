@@ -216,21 +216,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RNAseq processing pipeline.')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
-    for paran,param in countTask.get_params():
+    for paran,param in RNAseqWorkflow.get_params():
         if paran in defaultMappings:
             parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)], help=param.description)
         else: parser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
-    if os.environ.get('LUIGI_PBS_ENV'):
-        #Retrieve arguments from qsub job environment
+    if 'GENAIRICS_ENV_ARGS' in os.environ:
         #For testing:
         # os.environ.setdefault('datadir','testdir')
         # os.environ.setdefault('NSQrun','testrun')
-        args = parser.parse_args('{} {} {}'.format(
-            os.environ.get('datadir'),
-            os.environ.get('NSQrun'),
-            '--PEND ' if os.environ.get('PEND') else '',
-        ).split())
+
+        #Retrieve arguments from qsub job environment
+        args = []
+        for paran,param in RNAseqWorkflow.get_params():
+            if paran in os.environ:
+                args += ['--'+paran, os.environ['paran']]
+        args = parser.parse_args(' '.join(args))
+        print('Arguments retrieved from environment:',args)
     else:
         #Script started directly
         args = parser.parse_args()
@@ -238,7 +240,8 @@ if __name__ == '__main__':
     workflow = RNAseqWorkflow(**vars(args))
     print(workflow)
     for task in workflow.requires():
-        print(task)
-        if not task.complete(): task.run()
+        print(datetime.now(),task)
+        if task.complete(): print('Task finished previously')
+        else: task.run()
 
     #print('[re]move ',luigitempdir)
