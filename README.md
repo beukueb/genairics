@@ -19,6 +19,12 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
     module load pandas
     pip3 install --user luigi
 
+## Example run
+
+   qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
+   -v project=2016_BRIP1kd_SVH,NSQrun=NSQ_Run212,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,SET_LUIGI_FRIENDLY=,GENAIRICS_ENV_ARGS= \
+   $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py
+   
 ## General setup for vo admin
 
     cd $VSC_DATA_VO/resources/bin

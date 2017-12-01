@@ -75,7 +75,7 @@ class basespaceData(luigi.Task):
         if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
         else: os.rename(downloadedName[0],self.output().path)
 
-@inherits(basespaceData)
+@inherits(setupProject)
 class mergeFASTQs(luigi.Task):
     """
     Merge fastqs if one sample contains more than one fastq
@@ -138,7 +138,7 @@ class qualityCheck(luigi.Task):
             outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
         pathlib.Path(self.output()[0].path).touch()
 
-@inherits(qualityCheck)
+@inherits(mergeFASTQs)
 class alignTask(luigi.Task):
     """
     Align reads to genome with STAR
@@ -242,6 +242,7 @@ class diffexpTask(luigi.Task):
             local['simpleDEvoom.R'](self.project, self.datadir, self.metafile, self.design)
         pathlib.Path(self.output()[0].path).touch()
 
+@inherits(basespaceData)
 @inherits(diffexpTask)
 class RNAseqWorkflow(luigi.WrapperTask):
     def requires(self):
