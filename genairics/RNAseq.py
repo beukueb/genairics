@@ -227,11 +227,15 @@ class diffexpTask(luigi.Task):
         return self.clone_parent()
     
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family))
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/summaries/DEexpression.csv'.format(self.datadir,self.project))
+        )
 
     def run(self):
-        local['simpleDEvoom.R'](self.project, self.datadir, self.metafile, self.design)
-        pathlib.Path(self.output().path).touch()
+        with local.env(R_MODULE="SET"):
+            local['simpleDEvoom.R'](self.project, self.datadir, self.metafile, self.design)
+        pathlib.Path(self.output()[0].path).touch()
 
 @inherits(diffexpTask)
 class RNAseqWorkflow(luigi.WrapperTask):
