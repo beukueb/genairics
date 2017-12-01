@@ -88,7 +88,10 @@ class mergeFASTQs(luigi.Task):
         return self.clone_parent() #or self.clone(basespaceData)
         
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family))
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/{}.log'.format(self.datadir,self.project,self.task_family))
+        )
 
     def run(self):
         if self.dirstructure == 'multidir':
@@ -96,13 +99,13 @@ class mergeFASTQs(luigi.Task):
             os.mkdir(outdir)
             dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.project)).split()
             for d in dirsFASTQs:
-                (local['ls'] >> (self.output().path + '_log'))('-lh','{}/{}/{}'.format(self.datadir,self.project,d))
+                (local['ls'] >> (self.output()[1].path))('-lh','{}/{}/{}'.format(self.datadir,self.project,d))
                 (local['cat'] > outdir+d+'.fastq.gz')(
                     *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.project,d))
                 )
             os.rename('{}/{}'.format(self.datadir,self.project),'{}/{}_original_FASTQs'.format(self.datadir,self.project))
             os.symlink(outdir,'{}/{}'.format(self.datadir,self.project), target_is_directory = True)
-        pathlib.Path(self.output().path).touch()
+        pathlib.Path(self.output()[0].path).touch()
 
 @inherits(mergeFASTQs)
 class qualityCheck(luigi.Task):
@@ -221,7 +224,9 @@ class countTask(luigi.Task):
 
 @inherits(countTask)
 class diffexpTask(luigi.Task):
-    design = luigi.Parameter(description='model design for differential expression analysis')
+    defaultMappings['design'] = ''
+    design = luigi.Parameter(defaultMappings['design'],
+                             description='model design for differential expression analysis')
     
     def requires(self):
         return self.clone_parent()
@@ -284,7 +289,7 @@ if __name__ == '__main__':
     workflow = RNAseqWorkflow(**vars(args))
     print(workflow)
     for task in workflow.requires():
-        print(datetime.now(),task)
+        print(datetime.now(),task.task_family)
         if task.complete(): print('Task finished previously')
         else: task.run()
 
