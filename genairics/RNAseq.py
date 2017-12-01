@@ -73,7 +73,7 @@ class basespaceData(luigi.Task):
         #Renaming download dir simply to project name
         downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
         if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
-        else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.project))
+        else: os.rename(downloadedName[0],self.output().path)
 
 @inherits(basespaceData)
 class mergeFASTQs(luigi.Task):
