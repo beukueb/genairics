@@ -88,7 +88,7 @@ class mergeFASTQs(luigi.Task):
         return self.clone_parent() #or self.clone(basespaceData)
         
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/2_mergeFASTQs'.format(self.datadir,self.project))
+        return luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family))
 
     def run(self):
         if self.dirstructure == 'multidir':
@@ -106,13 +106,15 @@ class mergeFASTQs(luigi.Task):
 
 @inherits(mergeFASTQs)
 class qualityCheck(luigi.Task):
-
+    """
+    Runs fastqc on all samples and makes an overall summary
+    """
     def requires(self):
         return self.clone_parent()
         
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
             luigi.LocalTarget('{}/../results/{}/QCresults'.format(self.datadir,self.project)),
             luigi.LocalTarget('{}/../results/{}/summaries/qcsummary.csv'.format(self.datadir,self.project))
         )
@@ -135,6 +137,9 @@ class qualityCheck(luigi.Task):
 
 @inherits(qualityCheck)
 class alignTask(luigi.Task):
+    """
+    Align reads to genome with STAR
+    """
     defaultMappings['suffix'] = ''
     suffix = luigi.Parameter(default=defaultMappings['suffix'],description='use when preparing for xenome filtering')
     defaultMappings['genome'] = 'RSEMgenomeGRCg38'
@@ -150,7 +155,7 @@ class alignTask(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
             luigi.LocalTarget('{}/../results/{}/alignmentResults'.format(self.datadir,self.project)),
             luigi.LocalTarget('{}/../results/{}/summaries/STARcounts.csv'.format(self.datadir,self.project))
         )
@@ -182,6 +187,9 @@ class alignTask(luigi.Task):
     
 @inherits(alignTask)
 class countTask(luigi.Task):
+    """
+    Recount reads with RSEM
+    """
     defaultMappings['forwardprob'] = 0.5
     forwardprob = luigi.FloatParameter(default=defaultMappings['forwardprob'],
                                        description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
@@ -191,7 +199,7 @@ class countTask(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
             luigi.LocalTarget('{}/../results/{}/countResults'.format(self.datadir,self.project)),
             luigi.LocalTarget('{}/../results/{}/summaries/RSEMcounts.csv'.format(self.datadir,self.project))
         )
@@ -219,13 +227,13 @@ class diffexpTask(luigi.Task):
         return self.clone_parent()
     
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/6_{}_completed'.format(self.datadir,self.project,self.task_family))
+        return luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family))
 
     def run(self):
-        local['simpleDEvoom.R'](self.project, self.datadir, self.design)
+        local['simpleDEvoom.R'](self.project, self.datadir, self.metafile, self.design)
         pathlib.Path(self.output().path).touch()
 
-@inherits(countTask)
+@inherits(diffexpTask)
 class RNAseqWorkflow(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
@@ -234,6 +242,7 @@ class RNAseqWorkflow(luigi.WrapperTask):
         yield self.clone(qualityCheck)
         yield self.clone(alignTask)
         yield self.clone(countTask)
+        if self.design: yield self.clone(diffexpTask)
         
 if __name__ == '__main__':
     import argparse

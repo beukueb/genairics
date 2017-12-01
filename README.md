@@ -10,8 +10,14 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ### add to your HPC ~/.bashrc =>
 
     if [[ -v SET_LUIGI_FRIENDLY ]]; then module load pandas; unset SET_LUIGI_FRIENDLY; fi
+    if [[ -v R_MODULE ]]; then module purge; module load R-bundle-Bioconductor; unset R_MODULE; fi
     export PATH=$VSC_DATA_VO/resources/bin:$PATH
     export BASESPACE_API_TOKEN= #Set this to your basespace api token
+
+### Execute the following commands
+
+    module load pandas
+    pip3 install --user luigi
 
 ## General setup for vo admin
 

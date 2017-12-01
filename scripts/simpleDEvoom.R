@@ -1,0 +1,33 @@
+#!/usr/bin/env Rscript
+library(limma)
+
+# Read commandline arguments
+args = commandArgs()
+project = args[2]
+datadir = args[3]
+metafile = args[4]
+design = args[5]
+
+counts = read.table(paste(datadir,'../results',project,'summaries/RSEMcounts.csv',sep='/'),
+       header = T, row.names=1, sep=';')
+metadata = read.table(metafile, header = T, row.names=1)
+design = model.matrix(formula(design),data=metadata)
+#TODO colnames(design) = replace(':','.') for c in colnames(design)
+
+# Fit DE model
+png(paste(datadir,'../results',project,'plumbing/voomedData.png',sep='/'))
+voomedCounts = voom(counts,design=design,plot=T,normalize="quantile")
+dev.off()
+
+fit = lmFit(voomedCounts,design)
+#fit_r = limma.lmFit(voomedCounts_r.rx2('E'),design_r,weights=voomedCounts_r.rx2('weights'))
+#fit_r = limma.contrasts_fit(fit_r,contrasts_r)
+fit = eBayes(fit)
+print(summary(fit))
+print(head(fit$coefficients))
+
+# Export results
+rankedResults = topTable(fit,n=dim(counts)[1])
+write.table(rankedResults,
+	file=paste(datadir,'../results',project,'summaries/DEexpression.csv',sep='/'),
+	sep=',')
