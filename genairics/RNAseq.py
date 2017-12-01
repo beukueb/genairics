@@ -20,30 +20,60 @@ import pandas as pd
 defaultMappings = {}
 
 ## Tasks
-class basespaceData(luigi.Task):
+class setupProject(luigi.Task):
+    """
+    setupProject prepares the logistics for running the pipeline and directories for the results
+    optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
+    """
+    project = luigi.Parameter(description='name of the project')
     datadir = luigi.Parameter(description='directory that contains data in project folders')
-    NSQrun = luigi.Parameter(description='project name')
+    defaultMappings['metafile'] = ''
+    metafile = luigi.Parameter(defaultMappings['metafile'], description='metadata file for interpreting results')
+    
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/../results/{}'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/summaries'.format(self.datadir,self.project))
+        )
+
+    def run(self):
+        os.mkdir(self.output()[0].path)
+        if self.metafile:
+            from shutil import copyfile
+            os.mkdir(self.output()[0].path+'/metadata')
+            copyfile(self.metafile,self.output()[0].path+'/metadata/')
+        os.mkdir(self.output()[1].path)
+        os.mkdir(self.output()[2].path)
+
+@inherits(setupProject)
+class basespaceData(luigi.Task):
+    """
+    downloads the data from Illumina Basespace with cmgg provided python downloader
+    the task is completed when a datadir folder exists with the project name
+    so if you do not need to download it, just manually put the data in the datadir
+    with the project name
+    """
+    NSQrun = luigi.Parameter(description='sequencing run name')
     BASESPACE_API_TOKEN = (
         luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN')
         else luigi.Parameter(description='$BASESPACE_API_TOKEN')
     )
 
-    # Set up temporary dummy output file
-    # for every initiated task a new dummy is set up
-    # this ensures that every new workflow run, will exectute all tasks
+    def requires(self):
+        return self.clone_parent()
+
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/1_downloadCompleted'.format(self.datadir,self.NSQrun))
+        return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
 
     def run(self):
-        local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir)
+        (local['BaseSpaceRunDownloader.py'] > '{}/../results/{}/plumbing/download.log'.format(self.datadir,self.project))(
+            '-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir
+        )
         #Renaming download dir simply to project name
         downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
         if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
-        else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.NSQrun))
-        os.mkdir('{}/../results/{}'.format(self.datadir,self.NSQrun))
-        os.mkdir('{}/../results/{}/plumbing'.format(self.datadir,self.NSQrun))
-        os.mkdir('{}/../results/{}/summaries'.format(self.datadir,self.NSQrun))
-        pathlib.Path(self.output().path).touch()
+        else: os.rename(downloadedName[0],'{}/{}'.format(self.datadir,self.project))
 
 @inherits(basespaceData)
 class mergeFASTQs(luigi.Task):
@@ -58,20 +88,20 @@ class mergeFASTQs(luigi.Task):
         return self.clone_parent() #or self.clone(basespaceData)
         
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/2_mergeFASTQs'.format(self.datadir,self.NSQrun))
+        return luigi.LocalTarget('{}/../results/{}/plumbing/2_mergeFASTQs'.format(self.datadir,self.project))
 
     def run(self):
         if self.dirstructure == 'multidir':
-            outdir = '{}/../results/{}/fastqs/'.format(self.datadir,self.NSQrun)
+            outdir = '{}/../results/{}/fastqs/'.format(self.datadir,self.project)
             os.mkdir(outdir)
-            dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.NSQrun)).split()
+            dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.project)).split()
             for d in dirsFASTQs:
-                (local['ls'] >> (self.output().path + '_log'))('-lh','{}/{}/{}'.format(self.datadir,self.NSQrun,d))
+                (local['ls'] >> (self.output().path + '_log'))('-lh','{}/{}/{}'.format(self.datadir,self.project,d))
                 (local['cat'] > outdir+d+'.fastq.gz')(
-                    *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.NSQrun,d))
+                    *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.project,d))
                 )
-            os.rename('{}/{}'.format(self.datadir,self.NSQrun),'{}/{}_original_FASTQs'.format(self.datadir,self.NSQrun))
-            os.symlink(outdir,'{}/{}'.format(self.datadir,self.NSQrun), target_is_directory = True)
+            os.rename('{}/{}'.format(self.datadir,self.project),'{}/{}_original_FASTQs'.format(self.datadir,self.project))
+            os.symlink(outdir,'{}/{}'.format(self.datadir,self.project), target_is_directory = True)
         pathlib.Path(self.output().path).touch()
 
 @inherits(mergeFASTQs)
@@ -82,16 +112,16 @@ class qualityCheck(luigi.Task):
         
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/QCresults'.format(self.datadir,self.NSQrun)),
-            luigi.LocalTarget('{}/../results/{}/summaries/qcsummary.csv'.format(self.datadir,self.NSQrun))
+            luigi.LocalTarget('{}/../results/{}/plumbing/3_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/QCresults'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/summaries/qcsummary.csv'.format(self.datadir,self.project))
         )
 
     def run(self):
         import zipfile
         from io import TextIOWrapper
         
-        local['qualitycheck.sh'](self.NSQrun, self.datadir)
+        local['qualitycheck.sh'](self.project, self.datadir)
         qclines = []
         for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
             zf = zipfile.ZipFile(fqcfile)
@@ -120,13 +150,13 @@ class alignTask(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/alignmentResults'.format(self.datadir,self.NSQrun)),
-            luigi.LocalTarget('{}/../results/{}/summaries/STARcounts.csv'.format(self.datadir,self.NSQrun))
+            luigi.LocalTarget('{}/../results/{}/plumbing/4_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/alignmentResults'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/summaries/STARcounts.csv'.format(self.datadir,self.project))
         )
 
     def run(self):
-        local['STARaligning.sh'](self.NSQrun, self.datadir, self.suffix, self.genome, self.pairedEnd)
+        local['STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
 
         #Process STAR counts
         amb = []
@@ -161,13 +191,13 @@ class countTask(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.NSQrun,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/countResults'.format(self.datadir,self.NSQrun)),
-            luigi.LocalTarget('{}/../results/{}/summaries/RSEMcounts.csv'.format(self.datadir,self.NSQrun))
+            luigi.LocalTarget('{}/../results/{}/plumbing/5_{}_completed'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/countResults'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/summaries/RSEMcounts.csv'.format(self.datadir,self.project))
         )
 
     def run(self):
-        local['RSEMcounts.sh'](self.NSQrun, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd)
+        local['RSEMcounts.sh'](self.project, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd)
         # Process RSEM counts
         counts = {}
         samples = []
@@ -189,15 +219,16 @@ class diffexpTask(luigi.Task):
         return self.clone_parent()
     
     def output(self):
-        return luigi.LocalTarget('{}/../results/{}/plumbing/6_{}_completed'.format(self.datadir,self.NSQrun,self.task_family))
+        return luigi.LocalTarget('{}/../results/{}/plumbing/6_{}_completed'.format(self.datadir,self.project,self.task_family))
 
     def run(self):
-        local['simpleDEvoom.R'](self.NSQrun, self.datadir, self.design)
+        local['simpleDEvoom.R'](self.project, self.datadir, self.design)
         pathlib.Path(self.output().path).touch()
 
 @inherits(countTask)
 class RNAseqWorkflow(luigi.WrapperTask):
     def requires(self):
+        yield self.clone(setupProject)
         yield self.clone(basespaceData)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
