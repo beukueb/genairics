@@ -23,7 +23,7 @@ defaultMappings = {}
 class basespaceData(luigi.Task):
     datadir = luigi.Parameter(description='directory that contains data in project folders')
     NSQrun = luigi.Parameter(description='project name')
-    apitoken = (
+    BASESPACE_API_TOKEN = (
         luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN')
         else luigi.Parameter(description='$BASESPACE_API_TOKEN')
     )
@@ -35,7 +35,7 @@ class basespaceData(luigi.Task):
         return luigi.LocalTarget('{}/../results/{}/plumbing/1_downloadCompleted'.format(self.datadir,self.NSQrun))
 
     def run(self):
-        local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.apitoken, '-d', self.datadir)
+        local['BaseSpaceRunDownloader.py']('-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir)
         #Renaming download dir simply to project name
         downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
         if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
@@ -50,9 +50,9 @@ class mergeFASTQs(luigi.Task):
     """
     Merge fastqs if one sample contains more than one fastq
     """
-    dirstructure = luigi.Parameter(default='multidir',
-                                   description='dirstructure of datatdir: onedir or multidir')
     defaultMappings['dirstructure'] = 'multidir'
+    dirstructure = luigi.Parameter(default=defaultMappings['dirstructure'],
+                                   description='dirstructure of datatdir: onedir or multidir')
     
     def requires(self):
         return self.clone_parent() #or self.clone(basespaceData)
@@ -105,15 +105,15 @@ class qualityCheck(luigi.Task):
 
 @inherits(qualityCheck)
 class alignTask(luigi.Task):
-    suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
     defaultMappings['suffix'] = ''
-    genome = luigi.Parameter(default='RSEMgenomeGRCg38',
-                             description='reference genome to use')
+    suffix = luigi.Parameter(default=defaultMappings['suffix'],description='use when preparing for xenome filtering')
     defaultMappings['genome'] = 'RSEMgenomeGRCg38'
-    pairedEnd = luigi.BoolParameter(default=False,
+    genome = luigi.Parameter(default=defaultMappings['genome'],
+                             description='reference genome to use')
+    defaultMappings['pairedEnd'] = False
+    pairedEnd = luigi.BoolParameter(default=defaultMappings['pairedEnd'],
                                description='paired end sequencing reads')
 
-    defaultMappings['pairedEnd'] = False
     
     def requires(self):
         return self.clone_parent()
@@ -152,9 +152,9 @@ class alignTask(luigi.Task):
     
 @inherits(alignTask)
 class countTask(luigi.Task):
-    forwardprob = luigi.FloatParameter(default=0.5,
-                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
     defaultMappings['forwardprob'] = 0.5
+    forwardprob = luigi.FloatParameter(default=defaultMappings['forwardprob'],
+                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
     
     def requires(self):
         return self.clone_parent()
