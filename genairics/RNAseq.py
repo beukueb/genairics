@@ -238,6 +238,7 @@ class diffexpTask(luigi.Task):
         )
 
     def run(self):
+        if not self.metafile: raise Exception('metafile needs to be provided to run DE analysis')
         with local.env(R_MODULE="SET"):
             local['bash'][
                 '-i','-c', ' '.join(

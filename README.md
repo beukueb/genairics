@@ -31,6 +31,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
     ln -s ../repos/qsub_scripts/qualitycheck.sh qualitycheck.sh
     ln -s ../repos/qsub_scripts/STARaligning.sh STARaligning.sh
     ln -s ../repos/qsub_scripts/RSEMcounts.sh RSEMcounts.sh
+    ln -s ../repos/genairics/scripts/simpleDEvoom.R simpleDEvoom.R
 
 ## Development
 
