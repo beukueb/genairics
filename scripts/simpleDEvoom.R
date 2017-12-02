@@ -4,10 +4,10 @@ library("limma")
 
 # Read commandline arguments
 args = commandArgs()
-project = args[2]
-datadir = args[3]
-metafile = args[4]
-design = args[5]
+project = args[length(args)-3]
+datadir = args[length(args)-2]
+metafile = args[length(args)-1]
+design = args[length(args)]
 
 counts = read.table(paste(datadir,'../results',project,'summaries/RSEMcounts.csv',sep='/'),
        header = T, row.names=1, sep=';')
