@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
-library(limma)
+
+library("limma")
 
 # Read commandline arguments
 args = commandArgs()

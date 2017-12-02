@@ -239,7 +239,7 @@ class diffexpTask(luigi.Task):
 
     def run(self):
         with local.env(R_MODULE="SET"):
-            local['simpleDEvoom.R'](self.project, self.datadir, self.metafile, self.design)
+            local['bash'][local['simpleDEvoom.R'][self.project, self.datadir, self.metafile, self.design]]()
         pathlib.Path(self.output()[0].path).touch()
 
 @inherits(basespaceData)
