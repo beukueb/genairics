@@ -17,7 +17,8 @@ design = model.matrix(formula(design),data=metadata)
 #TODO colnames(design) = replace(':','.') for c in colnames(design)
 
 # Fit DE model
-png(paste(datadir,'../results',project,'plumbing/voomedData.png',sep='/'))
+svg(paste(datadir,'../results',project,'plumbing/voomedData.svg',sep='/'))
+# png does not work on server -> x11 issue
 voomedCounts = voom(counts,design=design,plot=T,normalize="quantile")
 dev.off()
 
