@@ -17,7 +17,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ### Execute the following commands
 
     module load pandas
-    pip3 install --user luigi
+    pip3 install --user luigi openpyxl
 
 ## Example run
 

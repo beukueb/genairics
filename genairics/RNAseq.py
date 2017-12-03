@@ -39,9 +39,9 @@ class setupProject(luigi.Task):
 
     def run(self):
         os.mkdir(self.output()[0].path)
+        os.mkdir(self.output()[0].path+'/metadata')
         if self.metafile:
             from shutil import copyfile
-            os.mkdir(self.output()[0].path+'/metadata')
             copyfile(self.metafile,self.output()[0].path+'/metadata/')
         os.mkdir(self.output()[1].path)
         os.mkdir(self.output()[2].path)
@@ -238,7 +238,23 @@ class diffexpTask(luigi.Task):
         )
 
     def run(self):
-        if not self.metafile: raise Exception('metafile needs to be provided to run DE analysis')
+        if not self.metafile:
+            samples = glob.glob('{}/../results/{}/alignmentResults/*'.format(self.datadir,self.project))
+            samples = pd.DataFrame(
+                {'bam_location':samples,
+                 'alignment_dir_size':[local['du']['-sh'](s).split('\t')[0] for s in samples]},
+                index = [os.path.basename(s) for s in samples]
+            )
+            metafile = '{}/../results/{}/metadata/samples.csv'.format(self.datadir,self.project)
+            samples.to_csv(metafile)
+            raise Exception(
+                '''
+                metafile needs to be provided to run DE analysis
+                a template file has been generated for you ({})
+                adjust file to match your design, add the above file path
+                as input "metafile" for the pipeline and rerun
+                '''.format(metafile)
+            )
         with local.env(R_MODULE="SET"):
             local['bash'][
                 '-i','-c', ' '.join(
