@@ -9,6 +9,7 @@ project = args[1]
 datadir = args[2]
 metafile = args[3]
 design = args[4]
+result_coef = 1
 
 counts = read.table(paste(datadir,'../results',project,'summaries/RSEMcounts.csv',sep='/'),
        header = T, row.names=1, sep=',')
@@ -30,7 +31,7 @@ print(summary(fit))
 print(head(fit$coefficients))
 
 # Export results
-rankedResults = topTable(fit,n=dim(counts)[1])
+rankedResults = topTable(fit,coef=result_coef,n=dim(counts)[1])
 write.table(rankedResults,
 	file=paste(datadir,'../results',project,'summaries/DEexpression.csv',sep='/'),
 	sep=',')
