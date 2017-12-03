@@ -12,7 +12,7 @@ design = args[4]
 
 counts = read.table(paste(datadir,'../results',project,'summaries/RSEMcounts.csv',sep='/'),
        header = T, row.names=1, sep=';')
-metadata = read.table(metafile, header = T, row.names=1)
+metadata = read.table(metafile, header = T, row.names=1, sep=',')
 design = model.matrix(formula(design),data=metadata)
 #TODO colnames(design) = replace(':','.') for c in colnames(design)
 
