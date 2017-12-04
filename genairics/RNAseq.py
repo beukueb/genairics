@@ -62,7 +62,7 @@ class basespaceData(luigi.Task):
     defaultMappings['NSQrun'] = ''
     NSQrun = luigi.Parameter(defaultMappings['NSQrun'],description='sequencing run name')
     BASESPACE_API_TOKEN = (
-        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN',significant=False)
+        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN',significant=False) if os.environ.get('BASESPACE_API_TOKEN')
         else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
     )
 
