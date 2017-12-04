@@ -67,6 +67,9 @@ class setupLogging(luigi.Task):
         logger = logging.getLogger(__name__)
         logfile = logging.FileHandler(self.requires().output()[3].path)
         logfile.setLevel(logging.INFO)
+        handler.setFormatter(
+            logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
+        )
         logger.addHandler(logfile)
     
 @inherits(setupProject)
@@ -337,7 +340,7 @@ if __name__ == '__main__':
             if paran in os.environ:
                 args += ['--'+paran, os.environ[paran]]
         args = parser.parse_args(args)
-        print('Arguments were retrieved from environment')
+        logger.info('Arguments were retrieved from environment')
     else:
         #Script started directly
         args = parser.parse_args()
