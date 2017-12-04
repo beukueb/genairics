@@ -309,11 +309,10 @@ if __name__ == '__main__':
         #Retrieve arguments from qsub job environment
         args = []
         for paran,param in RNAseqWorkflow.get_params():
-            if paran == 'BASESPACE_API_TOKEN': continue #so that it does not end up in stdout
             if paran in os.environ:
                 args += ['--'+paran, os.environ[paran]]
         args = parser.parse_args(args)
-        print('Arguments retrieved from environment:',args)
+        print('Arguments were retrieved from environment')
     else:
         #Script started directly
         args = parser.parse_args()
