@@ -67,7 +67,7 @@ class setupLogging(luigi.Task):
         logger = logging.getLogger(__name__)
         logfile = logging.FileHandler(self.requires().output()[3].path)
         logfile.setLevel(logging.INFO)
-        handler.setFormatter(
+        logfile.setFormatter(
             logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
         )
         logger.addHandler(logfile)
