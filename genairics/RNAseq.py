@@ -62,8 +62,8 @@ class basespaceData(luigi.Task):
     defaultMappings['NSQrun'] = ''
     NSQrun = luigi.Parameter(defaultMappings['NSQrun'],description='sequencing run name')
     BASESPACE_API_TOKEN = (
-        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN')
-        else luigi.Parameter(description='$BASESPACE_API_TOKEN')
+        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN',significant=False)
+        else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
     )
 
     def requires(self):
@@ -309,6 +309,7 @@ if __name__ == '__main__':
         #Retrieve arguments from qsub job environment
         args = []
         for paran,param in RNAseqWorkflow.get_params():
+            if paran == 'BASESPACE_API_TOKEN': continue #so that it does not end up in stdout
             if paran in os.environ:
                 args += ['--'+paran, os.environ[paran]]
         args = parser.parse_args(args)
