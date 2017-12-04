@@ -9,12 +9,13 @@ project = args[1]
 datadir = args[2]
 metafile = args[3]
 design = args[4]
-result_coef = 1
+result_coef = 2
 
 counts = read.table(paste(datadir,'../results',project,'summaries/RSEMcounts.csv',sep='/'),
        header = T, row.names=1, sep=',')
 metadata = read.table(metafile, header = T, row.names=1, sep=',')
 design = model.matrix(formula(design),data=metadata)
+print(colnames(design))
 #TODO colnames(design) = replace(':','.') for c in colnames(design)
 
 # Fit DE model

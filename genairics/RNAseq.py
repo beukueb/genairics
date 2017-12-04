@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits
-from plumbum import local
+from plumbum import local, colors
 import pandas as pd
 
 ## Luigi dummy file target dir
@@ -247,7 +247,7 @@ class diffexpTask(luigi.Task):
             )
             metafile = '{}/../results/{}/metadata/samples.csv'.format(self.datadir,self.project)
             samples.to_csv(metafile)
-            raise Exception(
+            raise Exception( colors.red |
                 '''
                 metafile needs to be provided to run DE analysis
                 a template file has been generated for you ({})
@@ -311,8 +311,8 @@ if __name__ == '__main__':
     workflow = RNAseqWorkflow(**vars(args))
     print(workflow)
     for task in workflow.requires():
-        print(datetime.now(),task.task_family)
-        if task.complete(): print('Task finished previously')
+        print(colors.underline | str(datetime.now()),task.task_family)
+        if task.complete(): print(colors.green | 'Task finished previously')
         else: task.run()
 
     #print('[re]move ',luigitempdir)
