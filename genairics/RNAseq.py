@@ -351,8 +351,10 @@ if __name__ == '__main__':
     workflow.clone(setupLogging).run()
     logger.info(workflow)
     for task in workflow.requires():
-        logger.info(colors.underline | task.task_family)
-        if task.complete(): logger.info(colors.green | 'Task finished previously')
-        else: task.run()
+        if task.complete(): logger.info(
+                '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously'))
+        else:
+            logger.info(colors.underline | task.task_family)
+            task.run()
 
     #print('[re]move ',luigitempdir)
