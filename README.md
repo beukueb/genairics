@@ -17,7 +17,8 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ### Execute the following commands
 
     module load pandas
-    pip3 install --user luigi openpyxl
+    pip3 install --user luigi openpyxl matplotlib
+    mkdir $VSC_DATA_VO_USER/{data,results}
 
 ## Example run
 
@@ -42,5 +43,5 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ### Debug job
 
     qsub -q debug -l walltime=00:50:00 -l nodes=1:ppn=4 -m n \
-    -v datadir=$VSC_DATA_VO_USER/data,NSQrun=NSQ_Run270,forwardprob=0,SET_LUIGI_FRIENDLY=,GENAIRICS_ENV_ARGS= \
+    -v datadir=$VSC_DATA_VO_USER/data,project=NSQ_Run270,forwardprob=0,SET_LUIGI_FRIENDLY=,GENAIRICS_ENV_ARGS= \
     $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py

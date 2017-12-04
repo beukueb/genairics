@@ -13,6 +13,11 @@ from luigi.util import inherits
 from plumbum import local, colors
 import pandas as pd
 
+# matplotlib => setup for exporting svg figures only
+import matplotlib
+matplotlib.use('SVG')
+import matplotlib.pyplot as plt
+
 ## Luigi dummy file target dir
 #luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
 
@@ -54,7 +59,8 @@ class basespaceData(luigi.Task):
     so if you do not need to download it, just manually put the data in the datadir
     with the project name
     """
-    NSQrun = luigi.Parameter(description='sequencing run name')
+    defaultMappings['NSQrun'] = ''
+    NSQrun = luigi.Parameter(defaultMappings['NSQrun'],description='sequencing run name')
     BASESPACE_API_TOKEN = (
         luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN') if os.environ.get('BASESPACE_API_TOKEN')
         else luigi.Parameter(description='$BASESPACE_API_TOKEN')
@@ -67,6 +73,9 @@ class basespaceData(luigi.Task):
         return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
 
     def run(self):
+        if not self.NSQrun:
+            print(colors.cyan | 'NSQrun not provided and therefore set to project name ' + self.project)
+            self.NSQrun = self.project
         (local['BaseSpaceRunDownloader.py'] > '{}/../results/{}/plumbing/download.log'.format(self.datadir,self.project))(
             '-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir
         )
