@@ -39,7 +39,8 @@ class setupProject(luigi.Task):
         return (
             luigi.LocalTarget('{}/../results/{}'.format(self.datadir,self.project)),
             luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/summaries'.format(self.datadir,self.project))
+            luigi.LocalTarget('{}/../results/{}/summaries'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/pipeline.log'.format(self.datadir,self.project))
         )
 
     def run(self):
@@ -51,6 +52,23 @@ class setupProject(luigi.Task):
         os.mkdir(self.output()[1].path)
         os.mkdir(self.output()[2].path)
 
+@inherits(setupProject)
+class setupLogging(luigi.Task):
+    """
+    Registers the logging file
+    Always needs to run, to enable logging to the file
+    """
+
+    def requires(self):
+        return self.clone_parent()
+
+    def run(self):
+        import logging
+        logger = logging.getLogger(__name__)
+        logfile = logging.FileHandler(self.requires().output()[3].path)
+        logfile.setLevel(logging.INFO)
+        logger.addHandler(logfile)
+    
 @inherits(setupProject)
 class basespaceData(luigi.Task):
     """
@@ -285,8 +303,15 @@ class RNAseqWorkflow(luigi.WrapperTask):
         if self.design: yield self.clone(diffexpTask)
         
 if __name__ == '__main__':
-    import argparse
+    import argparse, logging
 
+    # Set up logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    logconsole = logging.StreamHandler()
+    logconsole.setLevel(logging.ERROR)
+    logger.addHandler(logconsole)
+    
     typeMapping = {
         luigi.parameter.Parameter: str,
         luigi.parameter.BoolParameter: bool,
@@ -317,11 +342,15 @@ if __name__ == '__main__':
         #Script started directly
         args = parser.parse_args()
 
+    # Set up logging file for project
+    setupLogging(**vars(args)).run()
+
+    # Workflow
     workflow = RNAseqWorkflow(**vars(args))
-    print(workflow)
+    logger.info(workflow)
     for task in workflow.requires():
-        print(colors.underline | str(datetime.now()),task.task_family)
-        if task.complete(): print(colors.green | 'Task finished previously')
+        logger.info(colors.underline | str(datetime.now()),task.task_family)
+        if task.complete(): logger.info(colors.green | 'Task finished previously')
         else: task.run()
 
     #print('[re]move ',luigitempdir)
