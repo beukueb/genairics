@@ -17,7 +17,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ### Execute the following commands
 
     module load pandas
-    pip3 install --user luigi openpyxl matplotlib
+    pip3 install --user luigi plumbum openpyxl matplotlib
     mkdir $VSC_DATA_VO_USER/{data,results}
 
 ## Example run
@@ -33,6 +33,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
     ln -s ../repos/qsub_scripts/STARaligning.sh STARaligning.sh
     ln -s ../repos/qsub_scripts/RSEMcounts.sh RSEMcounts.sh
     ln -s ../repos/genairics/scripts/simpleDEvoom.R simpleDEvoom.R
+    ln -s ../repos/genairics/genairics/RNAseq.py RNAseq.py
 
 ## Development
 

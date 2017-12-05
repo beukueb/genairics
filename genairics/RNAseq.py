@@ -321,12 +321,16 @@ if __name__ == '__main__':
         luigi.parameter.FloatParameter: float
     }
     
-    parser = argparse.ArgumentParser(description='RNAseq processing pipeline.')
+    parser = argparse.ArgumentParser(description='''
+    RNAseq processing pipeline.
+    Arguments that end with "[value]" are optional and do not always need to be provided.
+    ''')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
     for paran,param in RNAseqWorkflow.get_params():
         if paran in defaultMappings:
-            parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)], help=param.description)
+            parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)],
+                                help=param.description+' [{}]'.format(defaultMappings[paran]))
         else: parser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
     if 'GENAIRICS_ENV_ARGS' in os.environ:
