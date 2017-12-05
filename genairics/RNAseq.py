@@ -12,6 +12,7 @@ from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits
 from plumbum import local, colors
 import pandas as pd
+import logging
 
 # matplotlib => setup for exporting svg figures only
 import matplotlib
@@ -30,10 +31,11 @@ class setupProject(luigi.Task):
     setupProject prepares the logistics for running the pipeline and directories for the results
     optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
     """
-    project = luigi.Parameter(description='name of the project')
+    project = luigi.Parameter(description='name of the project. if you want the same name as Illumina run name, provide here')
     datadir = luigi.Parameter(description='directory that contains data in project folders')
     defaultMappings['metafile'] = ''
-    metafile = luigi.Parameter(defaultMappings['metafile'], description='metadata file for interpreting results')
+    metafile = luigi.Parameter(defaultMappings['metafile'],
+                               description='metadata file for interpreting results and running differential expression analysis')
     
     def output(self):
         return (
@@ -63,7 +65,6 @@ class setupLogging(luigi.Task):
         return self.clone_parent()
 
     def run(self):
-        import logging
         logger = logging.getLogger(os.path.basename(__file__))
         logfile = logging.FileHandler(self.requires().output()[3].path)
         logfile.setLevel(logging.INFO)
@@ -96,15 +97,19 @@ class basespaceData(luigi.Task):
         return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
 
     def run(self):
+        logger = logging.getLogger(os.path.basename(__file__))
         if not self.NSQrun:
-            print(colors.cyan | 'NSQrun not provided and therefore set to project name ' + self.project)
+            logger.info(colors.cyan | 'NSQrun not provided and therefore set to project name ' + self.project)
             self.NSQrun = self.project
         (local['BaseSpaceRunDownloader.py'] > '{}/../results/{}/plumbing/download.log'.format(self.datadir,self.project))(
             '-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir
         )
         #Renaming download dir simply to project name
         downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
-        if len(downloadedName) != 1: raise Exception('Something went wrong downloading',self.NSQrun)
+        if len(downloadedName) != 1:
+            msg = 'Something went wrong downloading {}'.format(self.NSQrun)
+            logger.error(msg)
+            raise Exception(msg)
         else: os.rename(downloadedName[0],self.output().path)
 
 @inherits(setupProject)
@@ -270,6 +275,7 @@ class diffexpTask(luigi.Task):
         )
 
     def run(self):
+        logger = logging.getLogger(os.path.basename(__file__))
         if not self.metafile:
             samples = glob.glob('{}/../results/{}/alignmentResults/*'.format(self.datadir,self.project))
             samples = pd.DataFrame(
@@ -279,14 +285,14 @@ class diffexpTask(luigi.Task):
             )
             metafile = '{}/../results/{}/metadata/samples.csv'.format(self.datadir,self.project)
             samples.to_csv(metafile)
-            raise Exception( colors.red |
-                '''
+            msg = colors.red | '''
                 metafile needs to be provided to run DE analysis
                 a template file has been generated for you ({})
                 adjust file to match your design, add the above file path
                 as input "metafile" for the pipeline and rerun
                 '''.format(metafile)
-            )
+            logger.error(msg)
+            raise Exception(msg)
         with local.env(R_MODULE="SET"):
             local['bash'][
                 '-i','-c', ' '.join(
@@ -308,7 +314,7 @@ class RNAseqWorkflow(luigi.WrapperTask):
         if self.design: yield self.clone(diffexpTask)
         
 if __name__ == '__main__':
-    import argparse, logging
+    import argparse
 
     # Set up logging
     logger = logging.getLogger(os.path.basename(__file__))
@@ -326,6 +332,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='''
     RNAseq processing pipeline.
     Arguments that end with "[value]" or "[]" are optional and do not always need to be provided.
+    When the program is finished running, you can check the log file with "less -r plumbing/pipeline.log"
+    from your project's result directory. Errors will also be printed to stdout.
     ''')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
