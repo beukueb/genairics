@@ -83,7 +83,9 @@ class basespaceData(luigi.Task):
     defaultMappings['NSQrun'] = ''
     NSQrun = luigi.Parameter(defaultMappings['NSQrun'],description='sequencing run name')
     BASESPACE_API_TOKEN = (
-        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),description='$BASESPACE_API_TOKEN',significant=False) if os.environ.get('BASESPACE_API_TOKEN')
+        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
+                        description='set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument'
+                        ,significant=False) if os.environ.get('BASESPACE_API_TOKEN')
         else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
     )
 
@@ -323,7 +325,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='''
     RNAseq processing pipeline.
-    Arguments that end with "[value]" are optional and do not always need to be provided.
+    Arguments that end with "[value]" or "[]" are optional and do not always need to be provided.
     ''')
     # if arguments are set in environment, they are used as the argument default values
     # this allows seemless integration with PBS jobs
