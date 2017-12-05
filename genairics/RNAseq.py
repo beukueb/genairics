@@ -64,7 +64,7 @@ class setupLogging(luigi.Task):
 
     def run(self):
         import logging
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(os.path.basename(__file__))
         logfile = logging.FileHandler(self.requires().output()[3].path)
         logfile.setLevel(logging.INFO)
         logfile.setFormatter(
@@ -309,7 +309,7 @@ if __name__ == '__main__':
     import argparse, logging
 
     # Set up logging
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger(os.path.basename(__file__))
     logger.setLevel(logging.INFO)
     logconsole = logging.StreamHandler()
     logconsole.setLevel(logging.ERROR)
