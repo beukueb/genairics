@@ -109,7 +109,7 @@ class basespaceData(luigi.Task):
         if len(downloadedName) != 1:
             msg = 'Something went wrong downloading {}'.format(self.NSQrun)
             logger.error(msg)
-            raise Exception(msg)
+            raise Exception()
         else: os.rename(downloadedName[0],self.output().path)
 
 @inherits(setupProject)
@@ -119,7 +119,7 @@ class mergeFASTQs(luigi.Task):
     """
     defaultMappings['dirstructure'] = 'multidir'
     dirstructure = luigi.Parameter(default=defaultMappings['dirstructure'],
-                                   description='dirstructure of datatdir: onedir or multidir')
+                                   description='dirstructure of project datat directory: onedir (one file/sample) or multidir (one dir/sample)')
     
     def requires(self):
         return self.clone_parent() #or self.clone(basespaceData)
@@ -292,7 +292,7 @@ class diffexpTask(luigi.Task):
                 as input "metafile" for the pipeline and rerun
                 '''.format(metafile)
             logger.error(msg)
-            raise Exception(msg)
+            raise Exception()
         with local.env(R_MODULE="SET"):
             local['bash'][
                 '-i','-c', ' '.join(
