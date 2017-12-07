@@ -39,12 +39,17 @@ class Sample(luigi.Task):
     resultdir = luigi.Parameter(description="general result directory")
     extension = luigi.ChoiceParameter(choices=['fastq','fastq.gz'],default='fastq.gz')
 
+    @property
+    def named(self):
+        return os.path.basename(self.sample)[:-1-len(self.extension)]
+    
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.name = os.path.basename(self.sample)[:-1-len(self.extension)]
+        
     def output(self):
         return {
             'sample': luigi.LocalTarget(self.sample),
-            'name': LuigiStringTarget(
-                os.path.basename(self.sample)[:-1-len(self.extension)]
-            ),
             'resultdir': luigi.LocalTarget(self.resultdir)
         }
 
@@ -53,12 +58,27 @@ class Sample(luigi.Task):
         if not self.output()['resultdir'].exists():
             os.mkdir(self.output()['resultdir'].path)
             logger.info('created result directory %s',self.output()['resultdir'].path)
+        if not self.output()['sample'].exists():
+            logger.error('sample "%s" not found',self.output()['sample'].path)
+            raise FileNotFoundError
         if not self.sample.endswith(self.extension):
             logger.warning('sample does not end with "%s". naming will be wrong',self.extension)
 
 @inherits(Sample)
 class countReadsSample(luigi.Task):
     def requires(self): return self.clone_parent()
+
+    def output(self):
+        return [
+            luigi.LocalTarget('{}/readCounts'.format(self.resultdir)),
+            luigi.LocalTarget('{}/readCounts/{}'.format(self.resultdir,self.requires().name))
+        ]
     
     def run(self):
-        (local['cat'][self.sample] | local['grep']['-c','@'])()
+        if not self.output()[0].exists():
+            os.mkdir(self.output()[0].path)
+        (local['zcat'][self.input()['sample'].path] | local['grep']['-c','@'] > self.output()[1].path)()
+
+@inherits(Sample)
+class fastqcSample(luigi.Task):
+    def requires(self): return self.clone_parent()
