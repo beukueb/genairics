@@ -21,6 +21,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(help='sub-command help')
     for pipeline in pipelines:
         subparser = subparsers.add_parser(pipeline, help='{} help'.format(pipeline))
+        subparser.set_defaults(function=pipelines[pipeline])
         for paran,param in pipelines[pipeline].get_params():
             if type(param._default) in typeMapping.values():
                 subparser.add_argument('--'+paran, default=param._default, type=typeMapping[type(param)],
@@ -28,5 +29,6 @@ if __name__ == "__main__":
             else: subparser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
     args = parser.parse_args()
-
-    print(args)
+    args = vars(args)
+    workflow = args.pop('function')(**args)
+    print(workflow)
