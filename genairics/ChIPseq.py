@@ -19,11 +19,6 @@ import matplotlib
 matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
-## Helper function
-class LuigiStringTarget(str):
-    def exists(self):
-        return bool(self)
-
 ## Tasks
 from RNAseq import setupProject, setupLogging, basespaceData, mergeFASTQs
 
@@ -100,6 +95,8 @@ class fastqcSample(luigi.Task):
 #class cutadaptSample
 #cutadapt -e 0.1 -a GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC
 # CLBGA_TBX2_all.fastq | gzip > CLBGA_TBX2_all_clean.fastq.gz
+
+#subsampleTask => subsampling naar 30 miljoen indien meer
 
 #class mapSample
 #bowtie2 lopen en output doorspelen naar samtools, filer mapQ #groter dan 4

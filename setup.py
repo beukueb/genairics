@@ -3,10 +3,10 @@ from setuptools import setup
 package = 'genairics'
 version = '0.1'
 
-setup(name = 'genairics',
-      version = '0.1',
+setup(name = package,
+      version = version,
       description="GENeric AIRtight omICS pipelines",
-      url='https://github.ugent.be/cvneste/genairics/',
+      url='https://github.com/beukueb/genairics',
       author = 'Christophe Van Neste',
       author_email = 'christophe.vanneste@ugent.be',
       license = 'GNU GENERAL PUBLIC LICENSE',
