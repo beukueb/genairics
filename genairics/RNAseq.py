@@ -315,19 +315,7 @@ class RNAseqWorkflow(luigi.WrapperTask):
         
 if __name__ == '__main__':
     import argparse
-
-    # Set up logging
-    logger = logging.getLogger(os.path.basename(__file__))
-    logger.setLevel(logging.INFO)
-    logconsole = logging.StreamHandler()
-    logconsole.setLevel(logging.ERROR)
-    logger.addHandler(logconsole)
-    
-    typeMapping = {
-        luigi.parameter.Parameter: str,
-        luigi.parameter.BoolParameter: bool,
-        luigi.parameter.FloatParameter: float
-    }
+    from genairics import typeMapping, logger
     
     parser = argparse.ArgumentParser(description='''
     RNAseq processing pipeline.
