@@ -1,7 +1,7 @@
 from setuptools import setup
 
 package = 'genairics'
-version = '0.1'
+version = '0.1.1'
 
 setup(name = package,
       version = version,
@@ -13,7 +13,7 @@ setup(name = package,
       packages = ['genairics'],
       install_requires = [
           'luigi',
-          'pumblum',
+          'plumbum',
           'matplotlib',
           'pandas',
       ],

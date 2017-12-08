@@ -20,7 +20,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from RNAseq import setupProject, setupLogging, basespaceData, mergeFASTQs
+from genairics.RNAseq import setupProject, setupLogging, basespaceData, mergeFASTQs
 
 ### Single file tasks
 class Sample(luigi.Task):

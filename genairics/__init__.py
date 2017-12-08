@@ -38,6 +38,7 @@ logger.addHandler(logconsole)
 
 typeMapping = {
     luigi.parameter.Parameter: str,
+    luigi.parameter.ChoiceParameter: str,
     luigi.parameter.BoolParameter: bool,
     luigi.parameter.FloatParameter: float
 }
