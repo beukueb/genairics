@@ -1,7 +1,46 @@
 # genairics
+
 GENeric AIRtight omICS pipelines
 
-## Prepare your HPC account
+## Disclosure
+
+There comes a point in time when any human just has to develop their
+own, fully-fledged computational genomics platform. This is not that
+time for me, but it is good to set it as an aim: aiming for the stars,
+landing somewhere on the moon.
+
+### Design goals
+
+#### generic pipelines
+
+Although the pipelines here available are only developed for my
+specific bioinformatics needs and that of my collaborators, they are
+build up in a generic way, and some of the functionality in the main
+genairics package file might help or inspire you to build your own
+pipelines. The core of the pipelines is build with
+[luigi](https://luigi.readthedocs.io) and extensions are provided in
+this package's initialization file.
+
+#### airtight pipelines
+
+The pipelines are build so they can be started with a single,
+fool-proof command.  This should allow my collaborators, or scientists
+wanting to replicate my results, to easily do so. In the future, a
+docker container will also come along the package so the processing
+can be started up on any platform.
+
+#### omics pipelines
+
+The pipelines grow organically, as my research needs expand. I aim to
+process any kind of data. If you want to use my set of pipelines, but
+desire an expansion to make it more omics-like, contact me and we can
+see if there are opportunities to collaborate. More generally,
+everyone is welcome to leave suggestions in the [issues
+section](https://github.com/beukueb/genairics/issues) of the
+repository.
+
+## Installation
+### Prepare your HPC account
 ### Get your BASESPACE_API_TOKEN accessToken
 
 Folow the steps 1-5 from this link:
