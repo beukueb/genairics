@@ -19,6 +19,8 @@ along with this program at the root of the source package.
 """
 
 import luigi, os, logging
+from luigi.util import inherits
+from plumbum import local, colors
 
 ## Helper function
 class LuigiStringTarget(str):
@@ -42,3 +44,63 @@ typeMapping = {
     luigi.parameter.BoolParameter: bool,
     luigi.parameter.FloatParameter: float
 }
+
+# Generic tasks
+class setupProject(luigi.Task):
+    """
+    setupProject prepares the logistics for running the pipeline and directories for the results
+    optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
+    """
+    project = luigi.Parameter(description='name of the project. if you want the same name as Illumina run name, provide here')
+    datadir = luigi.Parameter(description='directory that contains data in project folders')
+    metafile = luigi.Parameter('',description='metadata file for interpreting results and running differential expression analysis')
+    
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/../results/{}'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/summaries'.format(self.datadir,self.project)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/pipeline.log'.format(self.datadir,self.project))
+        )
+
+    def run(self):
+        os.mkdir(self.output()[0].path)
+        os.mkdir(self.output()[0].path+'/metadata')
+        if self.metafile:
+            from shutil import copyfile
+            copyfile(self.metafile,self.output()[0].path+'/metadata/')
+        os.mkdir(self.output()[1].path)
+        os.mkdir(self.output()[2].path)
+
+@inherits(setupProject)
+class setupLogging(luigi.Task):
+    """
+    Registers the logging file
+    Always needs to run, to enable logging to the file
+    """
+    def requires(self):
+        return self.clone_parent()
+
+    def run(self):
+        logger = logging.getLogger(os.path.basename(__file__))
+        logfile = logging.FileHandler(self.requires().output()[3].path)
+        logfile.setLevel(logging.INFO)
+        logfile.setFormatter(
+            logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
+        )
+        logger.addHandler(logfile)
+
+# genairic (non-luigi) directed workflow runs
+def runTaskAndDependencies(task,logger=None):
+    #TODO -> recursive function for running workflow, check luigi alternative first
+    dependencies = task.requires()
+    
+def runWorkflow(pipeline):
+    pipeline.clone(setupLogging).run()
+    logger.info(pipeline)
+    for task in pipeline.requires():
+        if task.complete(): logger.info(
+                '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously'))
+        else:
+            logger.info(colors.underline | task.task_family)
+            task.run()

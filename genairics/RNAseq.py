@@ -22,57 +22,9 @@ import matplotlib.pyplot as plt
 ## Luigi dummy file target dir
 #luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
 
-## Default settings
-defaultMappings = {}
-
 ## Tasks
-class setupProject(luigi.Task):
-    """
-    setupProject prepares the logistics for running the pipeline and directories for the results
-    optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
-    """
-    project = luigi.Parameter(description='name of the project. if you want the same name as Illumina run name, provide here')
-    datadir = luigi.Parameter(description='directory that contains data in project folders')
-    defaultMappings['metafile'] = ''
-    metafile = luigi.Parameter(defaultMappings['metafile'],
-                               description='metadata file for interpreting results and running differential expression analysis')
-    
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/../results/{}'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/summaries'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/plumbing/pipeline.log'.format(self.datadir,self.project))
-        )
+from genairics import setupProject, setupLogging
 
-    def run(self):
-        os.mkdir(self.output()[0].path)
-        os.mkdir(self.output()[0].path+'/metadata')
-        if self.metafile:
-            from shutil import copyfile
-            copyfile(self.metafile,self.output()[0].path+'/metadata/')
-        os.mkdir(self.output()[1].path)
-        os.mkdir(self.output()[2].path)
-
-@inherits(setupProject)
-class setupLogging(luigi.Task):
-    """
-    Registers the logging file
-    Always needs to run, to enable logging to the file
-    """
-
-    def requires(self):
-        return self.clone_parent()
-
-    def run(self):
-        logger = logging.getLogger(os.path.basename(__file__))
-        logfile = logging.FileHandler(self.requires().output()[3].path)
-        logfile.setLevel(logging.INFO)
-        logfile.setFormatter(
-            logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
-        )
-        logger.addHandler(logfile)
-    
 @inherits(setupProject)
 class basespaceData(luigi.Task):
     """
@@ -81,8 +33,7 @@ class basespaceData(luigi.Task):
     so if you do not need to download it, just manually put the data in the datadir
     with the project name
     """
-    defaultMappings['NSQrun'] = ''
-    NSQrun = luigi.Parameter(defaultMappings['NSQrun'],description='sequencing run name')
+    NSQrun = luigi.Parameter('',description='sequencing run name')
     BASESPACE_API_TOKEN = (
         luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
                         description='set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument'
@@ -117,8 +68,7 @@ class mergeFASTQs(luigi.Task):
     """
     Merge fastqs if one sample contains more than one fastq
     """
-    defaultMappings['dirstructure'] = 'multidir'
-    dirstructure = luigi.Parameter(default=defaultMappings['dirstructure'],
+    dirstructure = luigi.Parameter(default='multidir',
                                    description='dirstructure of project datat directory: onedir (one file/sample) or multidir (one dir/sample)')
     
     def requires(self):
@@ -180,13 +130,10 @@ class alignTask(luigi.Task):
     """
     Align reads to genome with STAR
     """
-    defaultMappings['suffix'] = ''
-    suffix = luigi.Parameter(default=defaultMappings['suffix'],description='use when preparing for xenome filtering')
-    defaultMappings['genome'] = 'RSEMgenomeGRCg38'
-    genome = luigi.Parameter(default=defaultMappings['genome'],
+    suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
+    genome = luigi.Parameter(default='RSEMgenomeGRCg38',
                              description='reference genome to use')
-    defaultMappings['pairedEnd'] = False
-    pairedEnd = luigi.BoolParameter(default=defaultMappings['pairedEnd'],
+    pairedEnd = luigi.BoolParameter(default=False,
                                description='paired end sequencing reads')
 
     
@@ -230,8 +177,7 @@ class countTask(luigi.Task):
     """
     Recount reads with RSEM
     """
-    defaultMappings['forwardprob'] = 0.5
-    forwardprob = luigi.FloatParameter(default=defaultMappings['forwardprob'],
+    forwardprob = luigi.FloatParameter(default=0.5,
                                        description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
     
     def requires(self):
@@ -261,8 +207,7 @@ class countTask(luigi.Task):
 
 @inherits(countTask)
 class diffexpTask(luigi.Task):
-    defaultMappings['design'] = ''
-    design = luigi.Parameter(defaultMappings['design'],
+    design = luigi.Parameter(default='',
                              description='model design for differential expression analysis')
     
     def requires(self):
@@ -323,14 +268,14 @@ if __name__ == '__main__':
     When the program is finished running, you can check the log file with "less -r plumbing/pipeline.log"
     from your project's result directory. Errors will also be printed to stdout.
     ''')
-    # if arguments are set in environment, they are used as the argument default values
-    # this allows seemless integration with PBS jobs
     for paran,param in RNAseqWorkflow.get_params():
-        if paran in defaultMappings:
-            parser.add_argument('--'+paran, default=defaultMappings[paran], type=typeMapping[type(param)],
-                                help=param.description+' [{}]'.format(defaultMappings[paran]))
+        if type(param._default) in typeMapping.values():
+            parser.add_argument('--'+paran, default=param._default, type=typeMapping[type(param)],
+                                help=param.description+' [{}]'.format(param._default))
         else: parser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
+    # if arguments are set in environment, they are used as the argument default values
+    # this allows seemless integration with PBS jobs
     if 'GENAIRICS_ENV_ARGS' in os.environ:
         #For testing:
         # os.environ.setdefault('datadir','testdir')
@@ -347,16 +292,7 @@ if __name__ == '__main__':
         #Script started directly
         args = parser.parse_args()
 
-
     # Workflow
+    from genairics import runWorkflow
     workflow = RNAseqWorkflow(**vars(args))
-    workflow.clone(setupLogging).run()
-    logger.info(workflow)
-    for task in workflow.requires():
-        if task.complete(): logger.info(
-                '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously'))
-        else:
-            logger.info(colors.underline | task.task_family)
-            task.run()
-
-    #print('[re]move ',luigitempdir)
+    runWorkflow(workflow)

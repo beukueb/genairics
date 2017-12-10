@@ -3,7 +3,7 @@
 if __name__ == "__main__":
     import argparse
     from collections import OrderedDict
-    from genairics import typeMapping, logger
+    from genairics import typeMapping, logger, runWorkflow
     from genairics.RNAseq import RNAseqWorkflow
     from genairics.ChIPseq import fastqcSample
 
@@ -31,4 +31,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     args = vars(args)
     workflow = args.pop('function')(**args)
-    print(workflow)
+    runWorkflow(workflow)
