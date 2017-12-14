@@ -12,7 +12,7 @@ def main():
         ('ChIPseq',fastqcSample)
     ))
     
-    parser = argparse.ArgumentParser(prog='python -m genairics', description='''
+    parser = argparse.ArgumentParser(description='''
     GENeric AIRtight omICS pipeline.
     Arguments that end with "[value]" or "[]" are optional and do not always need to be provided.
     When the program is finished running, you can check the log file with "less -r plumbing/pipeline.log"

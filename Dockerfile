@@ -17,9 +17,9 @@ ADD scripts/genairics_dependencies.sh $REPOS/genairics_dependencies.sh
 RUN $REPOS/genairics_dependencies.sh
 RUN if [ "$buildtype" = "production" ]; then pip install genairics; fi
 RUN if [ "$buildtype" = "development" ]; then git clone https://github.com/beukueb/genairics.git && cd genairics && pip install .; fi
-ENTRYPOINT ["python","-m","genairics"]
-CMD ["-h"]
 EXPOSE 8000
 VOLUME ["/resources"]
 VOLUME ["/data"]
 VOLUME ["/results"]
+ENTRYPOINT ["genairics"]
+CMD ["-h"]
