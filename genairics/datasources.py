@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+
+import luigi, os, sys, itertools
+from luigi.utils import inherits
+from genairics import setupProject
+
+@inherits(setupProject)
+class BaseSpaceSource(luigi.Task):
+    """
+    Uses the BaseSpace API from Illumina for downloading.
+    It takes the project name and downloads the fastq files.
+    """
+    NSQrun = luigi.Parameter('',description='sequencing run project name')
+    BASESPACE_API_TOKEN = (
+        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
+                        description='set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument'
+                        ,significant=False) if os.environ.get('BASESPACE_API_TOKEN')
+        else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
+    )
+
+    def requires(self):
+        return self.clone_parent()
+
+    def output(self):
+        return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
+    
+    def run(self):
+        import requests
+
+        # Find the project ID
+        request = 'http://api.basespace.illumina.com/v1pre3/users/current/projects?access_token=%s&limit=1000' % (self.BASESPACE_API_TOKEN,)
+        r = requests.get(request)
+        projectName = False
+        for project in r.json()['Response']['Items']:
+            if project['Name'] == self.NSQrun:
+                (projectName, projectID) = (project['Name'], project['Id'])
+                break
+    
+        if not projectName:
+            raise Exception('Project {} not found on BaseSpace'.format(self.NSQrun))
+
+        # Prepare temp dir for downloading
+        outtempdir = tempfile.mkdtemp(prefix=self.datadir+'/',suffix='/')
+
+        # Find project sample IDs (max 1000)
+        request = 'http://api.basespace.illumina.com/v1pre3/projects/%s/samples?access_token=%s&limit=1000' % (projectID, self.BASESPACE_API_TOKEN)
+        r = requests.get(request)
+        for sample in r.json()['Response']['Items']:
+            (sampleName, sampleID) = (sample['Name'], sample['Id'])
+            print(sampleName)
+            sampleDir = os.path.join(self.output().path, sampleName)
+            sample_request = 'http://api.basespace.illumina.com/v1pre3/samples/%s/files?access_token=%s' % (sampleID, self.BASESPACE_API_TOKEN)
+            sample_request = requests.get(sample_request)
+            for sampleFile in sample_request.json()['Response']['Items']:
+                filePath = os.path.join(sampleDir, sample_file['Path'],)
+                print(filePath)
+                if not os.path.isfile(filePath):
+                    file_request = 'http://api.basespace.illumina.com/%s/content?access_token=%s' % (sampleFile['Href'], self.BASESPACE_API_TOKEN)
+                    file_request = requests.get(file_request, stream=True)
+                    with open(filePath,'wb') as outfile:
+                        for chunk in file_request.iter_content(chunk_size=512):
+                            outfile.write(chunk)
+                #check downloas
+                if sampleFile['Size'] != os.path.getsize(filePath):
+                    print('size of local file and BaseSpace file do not match')
+                    raise Exception()
+    
