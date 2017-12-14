@@ -21,44 +21,7 @@ import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import setupProject, setupLogging
-
-@inherits(setupProject)
-class basespaceData(luigi.Task):
-    """
-    downloads the data from Illumina Basespace with cmgg provided python downloader
-    the task is completed when a datadir folder exists with the project name
-    so if you do not need to download it, just manually put the data in the datadir
-    with the project name
-    """
-    NSQrun = luigi.Parameter('',description='sequencing run name')
-    BASESPACE_API_TOKEN = (
-        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
-                        description='set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument'
-                        ,significant=False) if os.environ.get('BASESPACE_API_TOKEN')
-        else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
-    )
-
-    def requires(self):
-        return self.clone_parent()
-
-    def output(self):
-        return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
-
-    def run(self):
-        logger = logging.getLogger(os.path.basename(__file__))
-        if not self.NSQrun:
-            logger.info(colors.cyan | 'NSQrun not provided and therefore set to project name ' + self.project)
-            self.NSQrun = self.project
-        (local['BaseSpaceRunDownloader.py'] > '{}/../results/{}/plumbing/download.log'.format(self.datadir,self.project))(
-            '-p', self.NSQrun, '-a', self.BASESPACE_API_TOKEN, '-d', self.datadir
-        )
-        #Renaming download dir simply to project name
-        downloadedName = glob.glob('{}/{}*'.format(self.datadir,self.NSQrun))
-        if len(downloadedName) != 1:
-            msg = 'Something went wrong downloading {}'.format(self.NSQrun)
-            logger.error(msg)
-            raise Exception()
-        else: os.rename(downloadedName[0],self.output().path)
+from genairics.datasources import BaseSpaceSource
 
 @inherits(setupProject)
 class mergeFASTQs(luigi.Task):
@@ -217,7 +180,7 @@ class diffexpTask(luigi.Task):
         )
 
     def run(self):
-        logger = logging.getLogger(os.path.basename(__file__))
+        logger = logging.getLogger(__package__)
         if not self.metafile:
             samples = glob.glob('{}/../results/{}/alignmentResults/*'.format(self.datadir,self.project))
             samples = pd.DataFrame(
@@ -243,12 +206,12 @@ class diffexpTask(luigi.Task):
                 )]()
         pathlib.Path(self.output()[0].path).touch()
 
-@inherits(basespaceData)
+@inherits(BaseSpaceSource)
 @inherits(diffexpTask)
 class RNAseqWorkflow(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
-        yield self.clone(basespaceData)
+        yield self.clone(BaseSpaceSource)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
         yield self.clone(alignTask)
@@ -256,7 +219,6 @@ class RNAseqWorkflow(luigi.WrapperTask):
         if self.design: yield self.clone(diffexpTask)
         
 if __name__ == '__main__':
-    print(__package__)
     import argparse
     from genairics import typeMapping, logger
     
