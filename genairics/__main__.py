@@ -1,6 +1,6 @@
 #!/ur/bin/env python
 
-if __name__ == "__main__":
+def main():
     import argparse
     from collections import OrderedDict
     from genairics import typeMapping, logger, runWorkflow
@@ -32,3 +32,6 @@ if __name__ == "__main__":
     args = vars(args)
     workflow = args.pop('function')(**args)
     runWorkflow(workflow)
+
+if __name__ == "__main__":
+    main()

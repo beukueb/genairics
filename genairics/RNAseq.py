@@ -19,9 +19,6 @@ import matplotlib
 matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
-## Luigi dummy file target dir
-#luigitempdir = tempfile.mkdtemp(prefix=os.environ.get('TMPDIR','/tmp/')+'luigi',suffix='/')
-
 ## Tasks
 from genairics import setupProject, setupLogging
 
@@ -259,6 +256,7 @@ class RNAseqWorkflow(luigi.WrapperTask):
         if self.design: yield self.clone(diffexpTask)
         
 if __name__ == '__main__':
+    print(__package__)
     import argparse
     from genairics import typeMapping, logger
     

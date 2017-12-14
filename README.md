@@ -25,8 +25,8 @@ this package's initialization file.
 
 The pipelines are build so they can be started with a single,
 fool-proof command.  This should allow my collaborators, or scientists
-wanting to replicate my results, to easily do so. In the future, a
-docker container will also come along the package so the processing
+wanting to replicate my results, to easily do so. A
+docker container is provided with the package so the processing
 can be started up on any platform.
 
 #### omics pipelines
@@ -85,3 +85,12 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
     qsub -q debug -l walltime=00:50:00 -l nodes=1:ppn=4 -m n \
     -v datadir=$VSC_DATA_VO_USER/data,project=NSQ_Run270,forwardprob=0,SET_LUIGI_FRIENDLY=,GENAIRICS_ENV_ARGS= \
     $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py
+
+### Running container
+
+    . ~/.BASESPACE_API
+    docker run -v /Users/cvneste/mnt/vsc/resources:/resources \
+               -v /Users/cvneste/mnt/vsc/vsc40603/data:/data \
+	       -v /Users/cvneste/mnt/vsc/vsc40603/results:/results \
+	       --env-file ~/.BASESPACE_API \
+	       8ab716d0a38f RNAseq --project 2016_BRIP1kd_SVH --datadir /data --forwardprob 0

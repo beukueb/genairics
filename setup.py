@@ -1,7 +1,7 @@
 from setuptools import setup
 
 package = 'genairics'
-version = '0.1.1'
+version = '0.1.2'
 
 setup(name = package,
       version = version,
@@ -16,8 +16,12 @@ setup(name = package,
           'plumbum',
           'matplotlib',
           'pandas',
+          'requests',
       ],
       zip_safe = False,
+      entry_points = {
+          'console_scripts': ['genairics=genairics.__main__:main'],
+      },
       test_suite = 'nose.collector',
       tests_require = ['nose']
 )

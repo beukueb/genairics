@@ -26,6 +26,3 @@ make
 cd ..
 ln -s $REPOS/RSEM/rsem-prepare-reference $PREFIX/bin/rsem-prepare-reference
 ln -s $REPOS/RSEM/rsem-calculate-expression $PREFIX/bin/rsem-calculate-expression
-
-## R&Bioconductor
-Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'

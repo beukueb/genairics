@@ -82,8 +82,8 @@ class setupLogging(luigi.Task):
         return self.clone_parent()
 
     def run(self):
-        logger = logging.getLogger(os.path.basename(__file__))
-        logfile = logging.FileHandler(self.requires().output()[3].path)
+        logger = logging.getLogger(__package__)
+        logfile = logging.FileHandler(self.input()[3].path)
         logfile.setLevel(logging.INFO)
         logfile.setFormatter(
             logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
@@ -95,7 +95,7 @@ def runTaskAndDependencies(task,logger=None):
     #TODO -> recursive function for running workflow, check luigi alternative first
     dependencies = task.requires()
     
-def runWorkflow(pipeline):
+def runWorkflow(pipeline,logger):
     pipeline.clone(setupLogging).run()
     logger.info(pipeline)
     for task in pipeline.requires():
