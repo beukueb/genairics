@@ -18,6 +18,12 @@ setup(name = package,
           'pandas',
           'requests',
       ],
+      scripts = [
+          'scripts/RSEMcounts.sh',
+          'scripts/STARaligning.sh',
+	  'scripts/qualitycheck.sh',
+          'scripts/simpleDEvoom.R'
+      ],
       include_package_data = True,
       zip_safe = False,
       entry_points = {
