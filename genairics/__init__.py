@@ -84,6 +84,7 @@ class setupLogging(luigi.Task):
     def run(self):
         #TODO put in a decorator for run functions, or rely on true luigi running
         if not self.requires().complete(): self.requires().run()
+        
         logger = logging.getLogger(__package__)
         logfile = logging.FileHandler(self.input()[3].path)
         logfile.setLevel(logging.INFO)
@@ -91,6 +92,9 @@ class setupLogging(luigi.Task):
             logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
         )
         logger.addHandler(logfile)
+        logcsl = logging.StreamHandler()
+        logcsl.setLevel(logging.WARNING)
+        logger.addHandler(logcsl)
 
 # genairic (non-luigi) directed workflow runs
 def runTaskAndDependencies(task,logger=None):

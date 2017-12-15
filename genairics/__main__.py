@@ -31,7 +31,7 @@ def main(args=None):
     if args is None:
         args = parser.parse_args()
         args = vars(args)
-        
+
     workflow = args.pop('function')(**args)
     runWorkflow(workflow)
 

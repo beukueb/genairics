@@ -29,8 +29,13 @@ class BaseSpaceSource(luigi.Task):
         return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
     
     def run(self):
-        import requests
+        import requests, tempfile
         logger = logging.getLogger(__package__)
+
+        # Check if NSQrun is set, otherwise set to project name
+        if not self.NSQrun:
+            self.NSQrun = self.project
+            logger.warning('NSQrun was not provided, assuming same as project %s' % self.project)
         
         # Find the project ID
         request = 'http://api.basespace.illumina.com/v1pre3/users/current/projects?access_token=%s&limit=1000' % (self.BASESPACE_API_TOKEN,)
