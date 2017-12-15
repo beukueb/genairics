@@ -1,0 +1,2 @@
+include scripts/*.sh
+include scripts/*.R
