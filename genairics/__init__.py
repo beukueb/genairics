@@ -95,8 +95,9 @@ def runTaskAndDependencies(task,logger=None):
     #TODO -> recursive function for running workflow, check luigi alternative first
     dependencies = task.requires()
     
-def runWorkflow(pipeline,logger):
+def runWorkflow(pipeline):
     pipeline.clone(setupLogging).run()
+    logger = logging.getLogger(__package__)
     logger.info(pipeline)
     for task in pipeline.requires():
         if task.complete(): logger.info(
