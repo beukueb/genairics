@@ -17,9 +17,12 @@ class BaseSpaceSource(luigi.Task):
     NSQrun = luigi.Parameter('',description='sequencing run project name')
     BASESPACE_API_TOKEN = (
         luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
-                        description='set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument'
+                        description='BASESPACE_API_TOKEN already set'
                         ,significant=False) if os.environ.get('BASESPACE_API_TOKEN')
-        else luigi.Parameter(description='$BASESPACE_API_TOKEN',significant=False)
+        else luigi.Parameter('NOT_YET_SET',
+                             description=
+                             'set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument',
+                             significant=False)
     )
 
     def requires(self):

@@ -12,7 +12,9 @@ def main(args=None):
         ('ChIPseq',fastqcSample)
     ))
     
-    parser = argparse.ArgumentParser(description='''
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=r'''
       _______
       -------
          |||
@@ -37,15 +39,20 @@ def main(args=None):
     When the program is finished running, you can check the log file with "less -r plumbing/pipeline.log"
     from your project's result directory. Errors will also be printed to stdout.
     ''')
+    
     subparsers = parser.add_subparsers(help='sub-command help')
     for pipeline in pipelines:
-        subparser = subparsers.add_parser(pipeline, help='{} help'.format(pipeline))
+        subparser = subparsers.add_parser(
+            pipeline,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            help='{} help'.format(pipeline)
+        )
         subparser.set_defaults(function=pipelines[pipeline])
         for paran,param in pipelines[pipeline].get_params():
             if type(param._default) in typeMapping.values():
                 subparser.add_argument('--'+paran, default=param._default, type=typeMapping[type(param)],
-                                       help=param.description+' [{}]'.format(param._default))
-            else: subparser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
+                                       help=param.description)
+            else: subparser.add_argument(paran, type=typeMapping[type(param)], help=param.description)
         
     if args is None:
         args = parser.parse_args()
