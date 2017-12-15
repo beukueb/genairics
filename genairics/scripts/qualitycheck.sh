@@ -9,16 +9,16 @@
 #qsub -k oe -v $variables ~/scripts/qsub_scripts/cleaning.sh
 
 #Variables:
-# NSQ_Run
+# project
 # datadir
 
 #Previous qsub runs
-#variables=dirstructure=onedir,NSQ_Run=2016_ATAC
-#variables=dirstructure=multidir,NSQ_Run=neuroblast_RNAseq_Roberts
+#variables=dirstructure=onedir,project=2016_ATAC
+#variables=dirstructure=multidir,project=neuroblast_RNAseq_Roberts
 
 #Set variables to commandline arguments if provided,
 # otherwise they should already be provided as environmental arguments
-if [ "$1" ]; then NSQ_Run=$1; fi
+if [ "$1" ]; then project=$1; fi
 if [ "$2" ]; then datadir=$2; fi
 
 #Variable defaults
@@ -33,13 +33,13 @@ fi
 if [ "$PBS_JOBID" ]; then
     cd $TMPDIR
     mkdir fastqs
-    cp $datadir/$NSQ_Run/*.fastq.gz fastqs/
+    cp $datadir/$project/*.fastq.gz fastqs/
     cd fastqs
 else
-    cd $datadir/$NSQ_Run/
+    cd $datadir/$project/
 fi
 
-outdir=$datadir/../results/${NSQ_Run}/QCresults
+outdir=$datadir/../results/${project}/QCresults
 mkdir -p $outdir
 
 fastqc -o $outdir -t 4 *.fastq.gz

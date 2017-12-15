@@ -14,18 +14,18 @@
 #qsub -v $variables ~/scripts/qsub_scripts/RSEMcounts.sh
 
 #Variables:
-# NSQ_Run
+# project
 # datadir = $VSC_DATA_VO_USER/results
 # genome
 # forwardprob = 0.5 -> unstranded, 0 illumina stranded
 # pairedEnd = False/True -> process paired end
 
 ## Variable example runs:
-#genome=STARzebrafish/zebrafish-RSEM,NSQ_Run=NSQ_Run273_ZF
+#genome=STARzebrafish/zebrafish-RSEM,project=project273_ZF
 
 #Set variables to commandline arguments if provided,
 # otherwise they should already be provided as environmental arguments
-if [ "$1" ]; then NSQ_Run=$1; fi
+if [ "$1" ]; then project=$1; fi
 if [ "$2" ]; then datadir=$2; fi
 if [ "$3" ]; then genome=$3; fi
 if [ "$4" ]; then forwardprob=$4; fi
@@ -36,6 +36,8 @@ datadir="${datadir:-$VSC_DATA_VO_USER/data}"
 genome="${genome:-RSEMgenomeGRCg38/human_ensembl}"
 forwardprob="${forwardprob:-0.5}"
 pairedEnd="${pairedEnd:-False}"
+#resourcedir has to be either /resources, $VSC_DATA_VO/resources, or provided as env variable
+resourcedir="${resourcedir:-$VSC_DATA_VO/resources}"
 
 if [ "$VSC_HOME" ]; then
     # Insure no incompatible modules are loaded
@@ -45,8 +47,8 @@ if [ "$VSC_HOME" ]; then
 fi
 
 #Prepare output dirs
-mkdir -p $datadir/../results/${NSQ_Run}/countResults
-cd $datadir/../results/${NSQ_Run}/countResults
+mkdir -p $datadir/../results/${project}/countResults
+cd $datadir/../results/${project}/countResults
 
 #Paired end option
 if [ "$pairedEnd" = "True" ]; then
@@ -54,7 +56,7 @@ if [ "$pairedEnd" = "True" ]; then
 fi
 
 #Prepare merged fastq's
-for dir in $(ls $datadir/../results/${NSQ_Run}/alignmentResults)
+for dir in $(ls $datadir/../results/${project}/alignmentResults)
 do
     if [ -d $dir.temp ]; then
         # Clean up if temporary files exist from a previous interrupted run
@@ -65,8 +67,8 @@ do
         echo $dir processed in previous run
     else
 	rsem-calculate-expression -p 16 --alignments $PEND --forward-prob $forwardprob \
-				  $datadir/../results/${NSQ_Run}/alignmentResults/$dir/Aligned.toTranscriptome.out.bam \
-				  $VSC_DATA_VO/resources/$genome $dir
+				  $datadir/../results/${project}/alignmentResults/$dir/Aligned.toTranscriptome.out.bam \
+				  $resourcedir/$genome $dir
     fi
 done
 

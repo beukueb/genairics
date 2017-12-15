@@ -35,7 +35,6 @@ def main(args=None):
 
     GENeric AIRtight omICS pipeline.
 
-    Arguments that end with "[value]" or "[]" are optional and do not always need to be provided.
     When the program is finished running, you can check the log file with "less -r plumbing/pipeline.log"
     from your project's result directory. Errors will also be printed to stdout.
     ''')

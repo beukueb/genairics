@@ -10,14 +10,14 @@
 #qsub -v $variables ~/scripts/qsub_scripts/STARaligning.sh
 
 #Variables:
-# NSQ_Run
+# project
 # datadir
 # suffix
 # genome
 
 #Set variables to commandline arguments if provided,
 # otherwise they should already be provided as environmental arguments
-if [ "$1" ]; then NSQ_Run=$1; fi
+if [ "$1" ]; then project=$1; fi
 if [ "$2" ]; then datadir=$2; fi
 if [ "$3" ]; then suffix=$3; fi
 if [ "$4" ]; then genome=$4; fi
@@ -27,6 +27,8 @@ if [ "$5" ]; then pairedEnd=$5; fi
 datadir="${datadir:-$VSC_DATA_VO_USER/data}"
 genome="${genome:-STARgenomeGRCh38}"
 pairedEnd="${pairedEnd:-False}"
+#resourcedir has to be either /resources, $VSC_DATA_VO/resources, or provided as env variable
+resourcedir="${resourcedir:-$VSC_DATA_VO/resources}"
 
 #Prepare workdir
 if [ "$PBS_JOBID" ]; then
@@ -36,40 +38,42 @@ if [ "$PBS_JOBID" ]; then
 	mkdir alignmentResults
     else
 	mkdir {fastqs,alignmentResults}
-	cp $datadir/$NSQ_Run/*.fastq.gz fastqs/
+	cp $datadir/$project/*.fastq.gz fastqs/
     fi
+    outdir=$TMPDIR/alignmentResults
 else
-    cd $datadir/../results/$NSQ_Run/
+    cd $datadir/../results/$project/
     mkdir alignmentResults
+    outdir=$datadir/../results/$project/alignmentResults
 fi
 
 for fastq in $(ls fastqs)
 do
-    mkdir $TMPDIR/alignmentResults/${fastq%%.*}
+    mkdir outdir/${fastq%%.*}
     if [ "$pairedEnd" = "True" ]; then
 	fqfiles=$(ls fastqs/$fastq | sed 's\^\fastqs/'$fastq'/\')
 	echo "Paired: " fqfiles
     else
 	fqfiles=fastqs/$fastq
     fi
-    STAR --runThreadN 16 --genomeDir $VSC_DATA_VO/resources/$genome \
+    STAR --runThreadN 16 --genomeDir $resourcedir/$genome \
 	--readFilesIn $fqfiles \
 	--readFilesCommand zcat \
-	--outFileNamePrefix $TMPDIR/alignmentResults/${fastq%%.*}/ \
+	--outFileNamePrefix $outdir/${fastq%%.*}/ \
 	--outSAMtype BAM SortedByCoordinate \
 	--quantMode TranscriptomeSAM GeneCounts
 done
 
 if [ "$PBS_JOBID" ]; then
-    mv $TMPDIR/alignmentResults $datadir/../results/${NSQ_Run}/alignmentResults${suffix}
+    mv $TMPDIR/alignmentResults $datadir/../results/${project}/alignmentResults${suffix}
 fi
 
 # Further documentation
 ## Previous runs
-#variables=dirstructure=multidir,NSQ_Run=NSQ_Run337,forwardprob=0,qRSEM=
-#variables=dirstructure=multidir_paired,NSQ_Run=neuroblast_RNAseq_Roberts
-#variables=dirstructure=onedir,NSQ_Run=2015_TMPYP4_SVH,qRSEM=
-#variables=dirstructure=onedir,datadir=$VSC_DATA_VO_USER/data,NSQ_Run=2015_BRIP1kd_SVH
-#variables=dirstructure=multidir,datadir=$VSC_DATA_VO_USER/data,NSQ_Run=NSQ_Run212-32391392 #BRIP1kd sep2016 data
-#variables=dirstructure=multidir,genome=STARzebrafish,NSQ_Run=ZF_MYCN
-#variables=dirstructure=onedir,NSQ_Run=N330_ESC_17q,suffix=_mouse,genome=STARmouseGenomeGRCh38
+#variables=dirstructure=multidir,project=project337,forwardprob=0,qRSEM=
+#variables=dirstructure=multidir_paired,project=neuroblast_RNAseq_Roberts
+#variables=dirstructure=onedir,project=2015_TMPYP4_SVH,qRSEM=
+#variables=dirstructure=onedir,datadir=$VSC_DATA_VO_USER/data,project=2015_BRIP1kd_SVH
+#variables=dirstructure=multidir,datadir=$VSC_DATA_VO_USER/data,project=project212-32391392 #BRIP1kd sep2016 data
+#variables=dirstructure=multidir,genome=STARzebrafish,project=ZF_MYCN
+#variables=dirstructure=onedir,project=N330_ESC_17q,suffix=_mouse,genome=STARmouseGenomeGRCh38
