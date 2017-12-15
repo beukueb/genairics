@@ -1,7 +1,7 @@
 #!/ur/bin/env python
 
 def main(args=None):
-    import argparse
+    import argparse, os
     from collections import OrderedDict
     from genairics import typeMapping, logger, runWorkflow
     from genairics.RNAseq import RNAseqWorkflow
@@ -54,7 +54,28 @@ def main(args=None):
             else: subparser.add_argument(paran, type=typeMapping[type(param)], help=param.description)
         
     if args is None:
-        args = parser.parse_args()
+        # if arguments are set in environment, they are used as the argument default values
+        # this allows seemless integration with PBS jobs
+        if 'GENAIRICS_ENV_ARGS' in os.environ:
+            #Retrieve arguments from qsub job environment
+            args = [os.environ['GENAIRICS_ENV_ARGS']]
+            positionals = []
+            optionals = []
+            for paran,param in pipelines[args[0]].get_params():
+                if paran in os.environ:
+                    if type(param._default) in typeMapping.values():
+                        optionals += ['--'+paran, os.environ[paran]]
+                    else: positionals.append(os.environ[paran])
+            logger.warning(
+                'Pipeline %s arguments were retrieved from environment: positional %s, optional %s',
+                args[0], positionals, optionals
+            )
+            args+= optionals + positionals
+            args = parser.parse_args(args)
+        else:
+            #Script started directly
+            args = parser.parse_args()
+        #Make dict out of args namespace for passing to pipeline
         args = vars(args)
 
     workflow = args.pop('function')(**args)

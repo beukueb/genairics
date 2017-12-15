@@ -69,7 +69,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 
     if [[ -v SET_LUIGI_FRIENDLY ]]; then module load pandas; unset SET_LUIGI_FRIENDLY; fi
     if [[ -v R_MODULE ]]; then module purge; module load R-bundle-Bioconductor; unset R_MODULE; fi
-    export PATH=$VSC_DATA_VO/resources/bin:$PATH
+    export PATH=$VSC_DATA_VO/resources/bin:$PATH:~/.local/bin
     export BASESPACE_API_TOKEN= #Set this to your basespace api token
 
 #### Execute the following commands
@@ -81,12 +81,15 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 ## Example run
 
    qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
-   -v project=2016_BRIP1kd_SVH,NSQrun=NSQ_Run212,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,SET_LUIGI_FRIENDLY=,GENAIRICS_ENV_ARGS= \
-   $VSC_DATA_VO/resources/repos/genairics/genairics/RNAseq.py
+   -v project=NSQ_Run240,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,GENAIRICS_ENV_ARGS=RNAseq,SET_LUIGI_FRIENDLY= \
+   `which genairics`
    
-## General setup for vo admin
+## General setup for sys/vo admin
 
-    ... install genairics dependencies
+Choose a different prefix, if you want dependencies installed in different dir
+
+    git clone https://github.com/beukueb/genairics.git && cd genairics
+    PREFIX=$VSC_DATA_VO/resources genairics/scripts/genairics_dependencies.sh
 
 ## Development
 
