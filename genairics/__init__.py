@@ -35,10 +35,10 @@ class LuigiStringTarget(str):
 gscripts = '{}/scripts/%s'.format(os.path.dirname(__file__))
 
 # Set up logging
-logger = logging.getLogger(os.path.basename(__file__))
+logger = logging.getLogger(__package__)
 logger.setLevel(logging.INFO)
 logconsole = logging.StreamHandler()
-logconsole.setLevel(logging.ERROR)
+logconsole.setLevel(logging.WARNING)
 logger.addHandler(logconsole)
 
 typeMapping = {
@@ -95,9 +95,6 @@ class setupLogging(luigi.Task):
             logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
         )
         logger.addHandler(logfile)
-        logcsl = logging.StreamHandler()
-        logcsl.setLevel(logging.WARNING)
-        logger.addHandler(logcsl)
 
 # genairic (non-luigi) directed workflow runs
 def runTaskAndDependencies(task,logger=None):

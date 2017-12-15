@@ -20,7 +20,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from genairics import gscripts, setupProject, setupLogging
+from genairics import logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource
 
 @inherits(setupProject)
@@ -108,8 +108,9 @@ class alignTask(luigi.Task):
         )
 
     def run(self):
-        local[gscripts % 'STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
-
+        stdout = local[gscripts % 'STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
+        logger.info('%s output:\n%s',self.task_family,stdout)
+        
         #Process STAR counts
         amb = []
         counts = []
@@ -182,7 +183,6 @@ class diffexpTask(luigi.Task):
         )
 
     def run(self):
-        logger = logging.getLogger(__package__)
         if not self.metafile:
             samples = glob.glob('{}/../results/{}/alignmentResults/*'.format(self.datadir,self.project))
             samples = pd.DataFrame(
@@ -222,7 +222,7 @@ class RNAseqWorkflow(luigi.WrapperTask):
         
 if __name__ == '__main__':
     import argparse
-    from genairics import typeMapping, logger
+    from genairics import typeMapping
     
     parser = argparse.ArgumentParser(description='''
     RNAseq processing pipeline.
