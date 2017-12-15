@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import setupProject, setupLogging
-from genairics.RNAseq import basespaceData, mergeFASTQs
+from genairics.RNAseq import mergeFASTQs
 
 ### Single file tasks
 class Sample(luigi.Task):
@@ -45,7 +45,7 @@ class Sample(luigi.Task):
         }
 
     def run(self):
-        logger = logging.getLogger(os.path.basename(__file__))
+        logger = logging.getLogger(__package__)
         if not self.output()['resultdir'].exists():
             os.mkdir(self.output()['resultdir'].path)
             logger.info('created result directory %s',self.output()['resultdir'].path)
