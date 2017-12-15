@@ -18,6 +18,7 @@ setup(name = package,
           'pandas',
           'requests',
       ],
+      include_package_data = True,
       zip_safe = False,
       entry_points = {
           'console_scripts': ['genairics=genairics.__main__:main'],
