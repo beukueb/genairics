@@ -13,7 +13,7 @@ ENV PREFIX=/usr
 RUN apt-get update && apt-get install -y git unzip fastqc r-base
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
 RUN mkdir $REPOS
-ADD scripts/genairics_dependencies.sh $REPOS/genairics_dependencies.sh
+ADD genairics/scripts/genairics_dependencies.sh $REPOS/genairics_dependencies.sh
 RUN $REPOS/genairics_dependencies.sh
 RUN if [ "$buildtype" = "production" ]; then pip install genairics; fi
 RUN if [ "$buildtype" = "development" ]; then git clone https://github.com/beukueb/genairics.git && cd genairics && pip install .; fi
