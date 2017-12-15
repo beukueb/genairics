@@ -1,2 +1,6 @@
-include scripts/*.sh
-include scripts/*.R
+#scripts
+include genairics/scripts/*.sh
+include genairics/scripts/*.R
+
+#Misc
+include LICENSE
