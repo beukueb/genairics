@@ -31,6 +31,9 @@ class LuigiStringTarget(str):
     def exists(self):
         return bool(self)
 
+# Set genairics script dir to be used with % formatting
+gscripts = '{}/scripts/%s'.format(os.path.dirname(__file__))
+
 # Set up logging
 logger = logging.getLogger(os.path.basename(__file__))
 logger.setLevel(logging.INFO)

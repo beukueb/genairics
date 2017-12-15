@@ -20,7 +20,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from genairics import setupProject, setupLogging
+from genairics import gscripts, setupProject, setupLogging
 from genairics.datasources import BaseSpaceSource
 
 @inherits(setupProject)
@@ -73,7 +73,7 @@ class qualityCheck(luigi.Task):
         import zipfile
         from io import TextIOWrapper
         
-        local['qualitycheck.sh'](self.project, self.datadir)
+        local[gscripts % 'qualitycheck.sh'](self.project, self.datadir)
         qclines = []
         for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
             zf = zipfile.ZipFile(fqcfile)
@@ -108,7 +108,7 @@ class alignTask(luigi.Task):
         )
 
     def run(self):
-        local['STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
+        local[gscripts % 'STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
 
         #Process STAR counts
         amb = []
@@ -151,7 +151,9 @@ class countTask(luigi.Task):
         )
 
     def run(self):
-        local['RSEMcounts.sh'](self.project, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd)
+        local[gscripts % 'RSEMcounts.sh'](
+            self.project, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd
+        )
         # Process RSEM counts
         counts = {}
         samples = []
@@ -201,7 +203,7 @@ class diffexpTask(luigi.Task):
         with local.env(R_MODULE="SET"):
             local['bash'][
                 '-i','-c', ' '.join(
-                    ['Rscript', local['which']('simpleDEvoom.R').strip(),
+                    ['Rscript', gscripts % 'simpleDEvoom.R',
                      self.project, self.datadir, self.metafile, self.design]
                 )]()
         pathlib.Path(self.output()[0].path).touch()
