@@ -82,6 +82,8 @@ class setupLogging(luigi.Task):
         return self.clone_parent()
 
     def run(self):
+        #TODO put in a decorator for run functions, or rely on true luigi running
+        if not self.requires().complete(): self.requires().run()
         logger = logging.getLogger(__package__)
         logfile = logging.FileHandler(self.input()[3].path)
         logfile.setLevel(logging.INFO)
