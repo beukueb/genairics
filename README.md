@@ -117,6 +117,10 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 	       --env-file ~/.BASESPACE_API \
 	       8ab716d0a38f RNAseq --project 2016_BRIP1kd_SVH --datadir /data --forwardprob 0
 
+To debug, reset entrypoint:
+
+    docker run -it -v /tmp/data:/data -v /tmp/results:/results -v /Users/cvneste/mnt/vsc/resources:/resources --env-file ~/.BASESPACE_API --entrypoint bash bcaf446c7765
+
 #### Cleaning docker containers/images
 
      docker system prune -f

@@ -49,7 +49,7 @@ fi
 
 for fastq in $(ls fastqs)
 do
-    mkdir outdir/${fastq%%.*}
+    mkdir $outdir/${fastq%%.*}
     if [ "$pairedEnd" = "True" ]; then
 	fqfiles=$(ls fastqs/$fastq | sed 's\^\fastqs/'$fastq'/\')
 	echo "Paired: " fqfiles
