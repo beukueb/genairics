@@ -1,6 +1,6 @@
 #!/ur/bin/env python
 
-def main():
+def main(args=None):
     import argparse
     from collections import OrderedDict
     from genairics import typeMapping, logger, runWorkflow
@@ -28,8 +28,10 @@ def main():
                                        help=param.description+' [{}]'.format(param._default))
             else: subparser.add_argument('--'+paran, type=typeMapping[type(param)], help=param.description)
         
-    args = parser.parse_args()
-    args = vars(args)
+    if args is None:
+        args = parser.parse_args()
+        args = vars(args)
+        
     workflow = args.pop('function')(**args)
     runWorkflow(workflow)
 
