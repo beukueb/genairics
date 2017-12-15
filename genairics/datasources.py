@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import luigi, logging, os, sys, itertools
-from luigi.utils import inherits
+from luigi.util import inherits
 from genairics import setupProject
 
 @inherits(setupProject)
