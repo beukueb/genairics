@@ -38,7 +38,7 @@ class RetrieveGenome(luigi.Task):
         logresources.info(stdout)
         stdout = local['rsync'](
             '-av',
-            'rsync://ftp.ensembl.org/ensembl/pub/release-{release}/gff3/{species}/*.{release}.gff3.gz'.format(
+            'rsync://ftp.ensembl.org/ensembl/pub/release-{release}/gtf/{species}/*.{release}.gtf.gz'.format(
                 species=self.genome, release=self.release),
             self.output().path+'_rsyncing/annotation'
         )
@@ -73,7 +73,7 @@ class STARandRSEMindex(luigi.Task):
     def run(self):
         genomeDir = self.input().path
         stdout = local['rsem-prepare-reference'](
-            '-gff3', *glob.glob(os.path.join(genomeDir,'annotation')+'/*.gff3'),
+            '-gtf', *glob.glob(os.path.join(genomeDir,'annotation')+'/*.gtf'),
             '--star', '--star-sjdboverhang', '100', '-p', self.threads,
             ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
             os.path.join(self.output()[0].path, self.genome)
