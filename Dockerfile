@@ -10,7 +10,8 @@ FROM python:3.6.3
 ARG buildtype=production
 ENV REPOS=/repos
 ENV PREFIX=/usr
-RUN apt-get update && apt-get install -y git unzip default-jre fastqc r-base
+ENV GENAIRICS_RESOURCES=/resources
+RUN apt-get update && apt-get install -y git unzip rsync default-jre fastqc r-base
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
 RUN mkdir $REPOS
 ADD genairics/scripts/genairics_dependencies.sh $REPOS/genairics_dependencies.sh

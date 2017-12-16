@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-#PBS -N RNAseqPipeline
-#PBS -l nodes=1:ppn=16
-#PBS -l walltime=72:00:00
-#PBS -m be
 """
 Full pipeline starting from BaseSpace fastq project
 """
