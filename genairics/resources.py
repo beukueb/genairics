@@ -54,6 +54,9 @@ class STARandRSEMindex(luigi.Task):
     Index that can be used by both STAR aligner and RSEM counter
     """
     threads = luigi.IntParameter(default=1, description='threads to use to build mapping index')
+
+    def requires(self):
+        return self.clone_parent()
     
     def output(self):
         return (
