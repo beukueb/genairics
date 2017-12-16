@@ -72,6 +72,7 @@ class STARandRSEMindex(luigi.Task):
     
     def run(self):
         genomeDir = self.input().path
+        os.mkdir(self.output()[0])
         stdout = local['rsem-prepare-reference'](
             '-gtf', *glob.glob(os.path.join(genomeDir,'annotation')+'/*.gtf'),
             '--star', '--star-sjdboverhang', '100', '-p', self.threads,
