@@ -101,11 +101,12 @@ class setupLogging(luigi.Task):
 def runTaskAndDependencies(task):
     #TODO -> recursive function for running workflow, check luigi alternative first
     if not task.complete():
+        dependencies = task.requires()
         try:
-            for dependency in task.requires():
+            for dependency in dependencies:
                 try:
                     if not dependency.complete(): runTaskAndDependencies(dependency)
-                except:
+                except AttributeError:
                     dependency = task.requires()[dependency]
                     if not dependency.complete(): runTaskAndDependencies(dependency)
         except TypeError:
