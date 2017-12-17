@@ -3,7 +3,8 @@
 def main(args=None):
     import argparse, os
     from collections import OrderedDict
-    from genairics import typeMapping, logger, runWorkflow
+    from plumbum import local
+    from genairics import gscripts, typeMapping, logger, runWorkflow
     from genairics.RNAseq import RNAseqWorkflow
     from genairics.ChIPseq import fastqcSample
 
@@ -52,7 +53,14 @@ def main(args=None):
                 subparser.add_argument('--'+paran, default=param._default, type=typeMapping[type(param)],
                                        help=param.description)
             else: subparser.add_argument(paran, type=typeMapping[type(param)], help=param.description)
-        
+
+    # Install dependencies option
+    subparser = subparsers.add_parser(
+        'install_dependencies',
+        help='Install the genairics user dependencies'
+    )
+    subparser.set_defaults(function=local[gscripts % 'genairics_dependencies.sh'])
+    
     if args is None:
         # if arguments are set in environment, they are used as the argument default values
         # this allows seemless integration with PBS jobs
