@@ -17,8 +17,8 @@ class RetrieveGenome(luigi.Task):
     """
     Prepares the genome
     """
-    genome = luigi.Parameter(default='homo_sapiens')
-    release = luigi.IntParameter(default=91,description="release of genome to install")
+    genome = luigi.Parameter(default='homo_sapiens',description="genome species name")
+    release = luigi.IntParameter(default=91,description="ensembl release number of genome")
 
     def output(self):
         return luigi.LocalTarget(
@@ -51,9 +51,9 @@ class RetrieveGenome(luigi.Task):
 @inherits(RetrieveGenome)
 class STARandRSEMindex(luigi.Task):
     """
-    Index that can be used by both STAR aligner and RSEM counter
+    Index that can be used by both STAR aligner and RSEM counter for transcriptomics
     """
-    threads = luigi.IntParameter(default=1, description='threads to use to build mapping index')
+    threads = luigi.IntParameter(default=1, description='STAR threads to use to build mapping index')
 
     def requires(self):
         return self.clone_parent()
@@ -61,11 +61,11 @@ class STARandRSEMindex(luigi.Task):
     def output(self):
         return (
             luigi.LocalTarget(
-                os.path.join(resourcedir,'ensembl/{species}/release-{release}/index'.format(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/transcriptome_index'.format(
                     species=self.genome,release=self.release))
             ),
             luigi.LocalTarget(
-                os.path.join(resourcedir,'ensembl/{species}/release-{release}/index/build_completed'.format(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/transcriptome_index/build_completed'.format(
                     species=self.genome,release=self.release))
             )
         )

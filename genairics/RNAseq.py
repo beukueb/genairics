@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 ## Tasks
 from genairics import logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource
-from genairics.resources import STARandRSEMindex
+from genairics.resources import resourcedir, STARandRSEMindex
 
 @inherits(setupProject)
 class mergeFASTQs(luigi.Task):
@@ -110,7 +110,11 @@ class alignTask(luigi.Task):
         )
 
     def run(self):
-        stdout = local[gscripts % 'STARaligning.sh'](self.project, self.datadir, self.suffix, self.genome, self.pairedEnd)
+        stdout = local[gscripts % 'STARaligning.sh'](
+            self.project, self.datadir, self.suffix, self.genome, self.pairedEnd,
+            resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
+                species=self.genome,release=self.release)
+        )
         logger.info('%s output:\n%s',self.task_family,stdout)
         
         #Process STAR counts

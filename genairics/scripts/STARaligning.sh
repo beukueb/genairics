@@ -22,10 +22,11 @@ if [ "$2" ]; then datadir=$2; fi
 if [ "$3" ]; then suffix=$3; fi
 if [ "$4" ]; then genome=$4; fi
 if [ "$5" ]; then pairedEnd=$5; fi
+if [ "$6" ]; then resourcedir=$6; fi
 
 #Variable defaults
 datadir="${datadir:-$VSC_DATA_VO_USER/data}"
-genome="${genome:-STARgenomeGRCh38}"
+genome="${genome:-homo_sapiens}"
 pairedEnd="${pairedEnd:-False}"
 #resourcedir has to be either /resources, $VSC_DATA_VO/resources, or provided as env variable
 resourcedir="${resourcedir:-$VSC_DATA_VO/resources}"
