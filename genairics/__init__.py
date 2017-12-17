@@ -97,17 +97,27 @@ class setupLogging(luigi.Task):
         logger.addHandler(logfile)
 
 # genairic (non-luigi) directed workflow runs
-def runTaskAndDependencies(task,logger=None):
+def runTaskAndDependencies(task):
     #TODO -> recursive function for running workflow, check luigi alternative first
-    dependencies = task.requires()
-    
+    if not task.complete():
+        try:
+            for dependency in task.requires():
+                try:
+                    if not dependency.complete(): runTaskAndDependencies(dependency)
+                except:
+                    dependency = task.requires()[dependency]
+                    if not dependency.complete(): runTaskAndDependencies(dependency)
+        except TypeError:
+            dependency = task.requires()
+            if not dependency.complete(): runTaskAndDependencies(dependency)
+        logger.info(colors.underline | task.task_family)
+        task.run()
+    else:
+        logger.info(
+                '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously')
+        )
+        
 def runWorkflow(pipeline):
     pipeline.clone(setupLogging).run()
-    logger = logging.getLogger(__package__)
     logger.info(pipeline)
-    for task in pipeline.requires():
-        if task.complete(): logger.info(
-                '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously'))
-        else:
-            logger.info(colors.underline | task.task_family)
-            task.run()
+    runTaskAndDependencies(pipeline)
