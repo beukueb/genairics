@@ -33,11 +33,9 @@ if [ "$5" ]; then pairedEnd=$5; fi
 
 #Variable defaults
 datadir="${datadir:-$VSC_DATA_VO_USER/data}"
-genome="${genome:-RSEMgenomeGRCg38/human_ensembl}"
+genome="${genome:-$VSC_DATA_VO/resources/ensembl/homo_sapiens/release-91/transcriptome_index/homo_sapiens}"
 forwardprob="${forwardprob:-0.5}"
 pairedEnd="${pairedEnd:-False}"
-#resourcedir has to be either /resources, $VSC_DATA_VO/resources, or provided as env variable
-resourcedir="${resourcedir:-$VSC_DATA_VO/resources}"
 
 if [ "$VSC_HOME" ]; then
     # Insure no incompatible modules are loaded
@@ -68,7 +66,7 @@ do
     else
 	rsem-calculate-expression -p 16 --alignments $PEND --forward-prob $forwardprob \
 				  $datadir/../results/${project}/alignmentResults/$dir/Aligned.toTranscriptome.out.bam \
-				  $resourcedir/$genome $dir
+				  $genome $dir
     fi
 done
 

@@ -159,7 +159,10 @@ class countTask(luigi.Task):
 
     def run(self):
         local[gscripts % 'RSEMcounts.sh'](
-            self.project, self.datadir, self.genome+'/human_ensembl', self.forwardprob, self.pairedEnd
+            self.project, self.datadir,
+            resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
+                species=self.genome,release=self.release),
+            self.forwardprob, self.pairedEnd
         )
         # Process RSEM counts
         counts = {}

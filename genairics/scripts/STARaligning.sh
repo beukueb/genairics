@@ -22,14 +22,13 @@ if [ "$2" ]; then datadir=$2; fi
 if [ "$3" ]; then suffix=$3; fi
 if [ "$4" ]; then genome=$4; fi
 if [ "$5" ]; then pairedEnd=$5; fi
-if [ "$6" ]; then resourcedir=$6; fi
+if [ "$6" ]; then genomedir=$6; fi
 
 #Variable defaults
 datadir="${datadir:-$VSC_DATA_VO_USER/data}"
 genome="${genome:-homo_sapiens}"
 pairedEnd="${pairedEnd:-False}"
-#resourcedir has to be either /resources, $VSC_DATA_VO/resources, or provided as env variable
-resourcedir="${resourcedir:-$VSC_DATA_VO/resources}"
+genomedir="${genomedir:-$VSC_DATA_VO/resources/ensembl/homo_sapiens/release-91/transcriptome_index}"
 
 #Prepare workdir
 if [ "$PBS_JOBID" ]; then
@@ -57,7 +56,7 @@ do
     else
 	fqfiles=fastqs/$fastq
     fi
-    STAR --runThreadN 16 --genomeDir $resourcedir/$genome \
+    STAR --runThreadN 16 --genomeDir $genomedir \
 	--readFilesIn $fqfiles \
 	--readFilesCommand zcat \
 	--outFileNamePrefix $outdir/${fastq%%.*}/ \
