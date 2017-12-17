@@ -58,6 +58,32 @@ section](https://github.com/beukueb/genairics/issues) of the
 repository.
 
 ## Installation
+
+### genairics package
+
+#### Dependencies
+
+Python 3 has to be installed: see https://www.python.org/downloads/ for instructions.
+
+#### Prepare virtualenv [optional]
+
+     sudo pip3 install virtualenvwrapper
+     echo "export WORKON_HOME=~/Envs" >> ~/.bashrc
+     echo "export VIRTUALENVWRAPPER_PYTHON=$(which python3)" >> ~/.bashrc
+     . ~/.bashrc
+     mkdir -p $WORKON_HOME
+     . /usr/local/bin/virtualenvwrapper.sh
+     mkvirtualenv genairics
+     echo "export GAX_REPOS=$VIRTUAL_ENV/repos" >> $VIRTUAL_ENV/bin/postactivate
+     echo "export GAX_PREFIX=$VIRTUAL_ENV" >> $VIRTUAL_ENV/bin/postactivate
+     echo "export GAX_RESOURCES=$VIRTUAL_ENV/resources" >> $VIRTUAL_ENV/bin/postactivate
+     echo "unset GAX_REPOS GAX_PREFIX GAX_RESOURCES" >> $VIRTUAL_ENV/bin/predeactivate
+
+#### Install
+
+     workon genairics #only when working in virtualenv
+     pip3 install genairics
+
 ### Get your BASESPACE_API_TOKEN accessToken
 
 Folow the steps 1-5 from this link:
@@ -82,7 +108,7 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 
    qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
    -v project=NSQ_Run240,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,GENAIRICS_ENV_ARGS=RNAseq,SET_LUIGI_FRIENDLY= \
-   `which genairics`
+   $(which genairics)
    
 ## General setup for sys/vo admin
 

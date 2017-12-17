@@ -2,7 +2,7 @@
 """
 Tasks here prepare resources that are required for some
 pipeline tasks, and are generally available from the
-resources directory as specified by $GENAIRICS_RESOURCES
+resources directory as specified by $GAX_RESOURCES
 """
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
@@ -10,7 +10,7 @@ from luigi.util import inherits
 from plumbum import local, colors
 import logging
 
-resourcedir = os.environ.get('GENAIRICS_RESOURCES',os.path.expanduser('~/resources'))
+resourcedir = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources'))
 logresources = logging.Logger('genairics.resources')
 
 class RetrieveGenome(luigi.Task):

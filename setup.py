@@ -20,6 +20,7 @@ setup(name = package,
       ],
       package_data = {
           'genairics': [
+              'scripts/genairics_dependencies.sh',
               'scripts/RSEMcounts.sh',
               'scripts/STARaligning.sh',
 	      'scripts/qualitycheck.sh',

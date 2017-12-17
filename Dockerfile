@@ -8,14 +8,14 @@
 
 FROM python:3.6.3
 ARG buildtype=production
-ENV REPOS=/repos
-ENV PREFIX=/usr
-ENV GENAIRICS_RESOURCES=/resources
+ENV GAX_REPOS=/repos
+ENV GAX_PREFIX=/usr
+ENV GAX_RESOURCES=/resources
 RUN apt-get update && apt-get install -y git unzip rsync default-jre fastqc r-base
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
-RUN mkdir $REPOS
-ADD genairics/scripts/genairics_dependencies.sh $REPOS/genairics_dependencies.sh
-RUN $REPOS/genairics_dependencies.sh
+RUN mkdir $GAX_REPOS
+ADD genairics/scripts/genairics_dependencies.sh $GAX_REPOS/genairics_dependencies.sh
+RUN $GAX_REPOS/genairics_dependencies.sh
 RUN if [ "$buildtype" = "production" ]; then pip install genairics; fi
 RUN if [ "$buildtype" = "development" ]; then git clone https://github.com/beukueb/genairics.git && cd genairics && pip install .; fi
 EXPOSE 8000
