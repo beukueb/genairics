@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 ## Tasks
 from genairics import logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource
+from genairics.resources import STARandRSEMindex
 
 @inherits(setupProject)
 class mergeFASTQs(luigi.Task):
@@ -86,19 +87,20 @@ class qualityCheck(luigi.Task):
         pathlib.Path(self.output()[0].path).touch()
 
 @inherits(mergeFASTQs)
+@inherits(STARandRSEMindex)
 class alignTask(luigi.Task):
     """
     Align reads to genome with STAR
     """
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
-    genome = luigi.Parameter(default='RSEMgenomeGRCg38',
-                             description='reference genome to use')
     pairedEnd = luigi.BoolParameter(default=False,
                                description='paired end sequencing reads')
-
     
     def requires(self):
-        return self.clone_parent()
+        return {
+            'genome':self.clone(STARandRSEMindex),
+            'fastqs':self.clone(mergeFASTQs)
+        }
 
     def output(self):
         return (
