@@ -15,6 +15,36 @@ from genairics import gscripts
 resourcedir = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources'))
 logresources = logging.Logger('genairics.resources')
 
+def requestFiles(urlDir,outdir,fileregex):
+    """
+    Download a set of files that match fileregex from urlDir
+    """
+    import requests, re
+    link = re.compile(r'href="(.+?)"')
+    if fileregex: fileregex = re.compile(fileregex)
+    if not urlDir.endswith('/'): urlDir+='/'
+    # Download checksums if present
+    checksums = requests.get(urlDir+'CHECKSUMS')
+    if checksums:
+        from io import StringIO
+        import pandas as pd
+        checksums = pd.read_table(StringIO(checksums.text),sep='\s+',
+                                  names=['checksum', 'octets', 'name'],index_col='name')
+    else: checksums = None
+    # Retrieve index
+    r = requests.get(urlDir)
+    for l in link.finditer(r.text):
+        l = l.groups()[0]
+        if not fileregex or fileregex.match(l):
+            file_request = requests.get(urlDir+l, stream=True)
+            with open(os.path.join(outdir,l),'wb') as outfile:
+                for chunk in file_request.iter_content(chunk_size=512):
+                    outfile.write(chunk)
+            if checksums is not None:
+                csum = int(local['cksum']('-o',1,os.path.join(outdir,l)).split()[0])
+                if csum != checksums.checksum[l]:
+                    logresources.warning('%s checksum did not match url location %s',csum,urlDir)
+
 class RetrieveGenome(luigi.Task):
     """
     Prepares the genome
@@ -29,26 +59,24 @@ class RetrieveGenome(luigi.Task):
 
     def run(self):
         #Make temp dir for data
-        local['mkdir']('-p',self.output().path+'_rsyncing/dna')
-        local['mkdir']('-p',self.output().path+'_rsyncing/annotation')
-        stdout = local['rsync'](
-            '-av',
-            'rsync://ftp.ensembl.org/ensembl/pub/release-{release}/fasta/{species}/dna/*.dna.chromosome.*.fa.gz'.format(
+        local['mkdir']('-p',self.output().path+'_retrieving/dna')
+        local['mkdir']('-p',self.output().path+'_retrieving/annotation')
+        requestFiles(
+            'http://ftp.ensembl.org/ensembl/pub/release-{release}/fasta/{species}/dna/'.format(
                 species=self.genome, release=self.release),
-            self.output().path+'_rsyncing/dna'
+            r'.+.dna.chromosome.+.fa.gz',
+            self.output().path+'_retrieving/dna'
         )
-        logresources.info(stdout)
-        stdout = local['rsync'](
-            '-av',
-            'rsync://ftp.ensembl.org/ensembl/pub/release-{release}/gtf/{species}/*.{release}.gtf.gz'.format(
+        requestFiles(
+            'http://ftp.ensembl.org/ensembl/pub/release-{release}/gtf/{species}/'.format(
                 species=self.genome, release=self.release),
-            self.output().path+'_rsyncing/annotation'
+            r'.+.{release}.gtf.gz'.format(release=self.release),
+            self.output().path+'_retrieving/annotation'
         )
-        logresources.info(stdout)
         #Unzip all files
-        local['gunzip'](*glob.glob(self.output().path+'_rsyncing/*/*.gz'))
+        local['gunzip'](*glob.glob(self.output().path+'_retrieving/*/*.gz'))
         #Rename temp dir to final/expected output dir
-        os.rename(self.output().path+'_rsyncing',self.output().path)
+        os.rename(self.output().path+'_retrieving',self.output().path)
 
 @inherits(RetrieveGenome)
 class STARandRSEMindex(luigi.Task):
@@ -82,4 +110,4 @@ class STARandRSEMindex(luigi.Task):
             os.path.join(self.output()[0].path, self.genome)
         )
         logresources.info(stdout)
-        os.path.touch(self.output()[1].path)
+        pathlib.Path(self.output()[1].path).touch()

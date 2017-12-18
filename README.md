@@ -150,6 +150,7 @@ Choose a different prefix, if you want dependencies installed in different dir
 
 #### Build container
 
+     #docker build . --build-arg buildtype=development #for development
      docker build . --tag beukueb/genairics:latest
      docker push beukueb/genairics:latest
      docker tag beukueb/genairics:latest genairics

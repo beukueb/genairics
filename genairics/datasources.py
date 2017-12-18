@@ -82,3 +82,10 @@ class BaseSpaceSource(luigi.Task):
 
         # Rename tempdir to final project name dir
         os.rename(outtempdir,self.output().path)
+
+@inherits(setupProject)
+class ENAsource(luigi.Task):
+    """
+    Downloads fastq's from given ENA accession number
+    """
+    ENAaccession = luigi.Parameter('',description='sequencing run project name')
