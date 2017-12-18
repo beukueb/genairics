@@ -10,6 +10,8 @@ from luigi.util import inherits
 from plumbum import local, colors
 import logging
 
+from genairics import gscripts
+
 resourcedir = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources'))
 logresources = logging.Logger('genairics.resources')
 

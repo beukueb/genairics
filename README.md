@@ -89,6 +89,9 @@ Python 3 has to be installed: see https://www.python.org/downloads/ for instruct
 Folow the steps 1-5 from this link:
 https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-downloader/
 
+	emacs ~/.BASESPACE_API #Store your accessToke here, instead of emacs use any editor you like
+	chmod 600 ~/.BASESPACE_API #For security, only rw access for your user
+
 ### Prepare your HPC account [for UGent collaborators]
 
 #### add to your HPC ~/.bashrc =>
@@ -106,9 +109,17 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 
 ## Example run
 
-   qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
-   -v project=NSQ_Run240,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,GENAIRICS_ENV_ARGS=RNAseq,SET_LUIGI_FRIENDLY= \
-   $(which genairics)
+### Docker
+
+    docker run -v ~/resources:/resources -v ~/data:/data -v ~/results:/results \
+	       --env-file ~/.BASESPACE_API beukueb/genairics RNAseq \
+	       NSQ_Run240 /data --genome saccharomyces_cerevisiae
+
+### qsub job
+
+    qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
+    -v project=NSQ_Run240,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,GENAIRICS_ENV_ARGS=RNAseq,SET_LUIGI_FRIENDLY= \
+    $(which genairics)
    
 ## General setup for sys/vo admin
 
@@ -137,14 +148,11 @@ Choose a different prefix, if you want dependencies installed in different dir
 
 ### Docker
 
-#### Running container
+#### Build container
 
-    . ~/.BASESPACE_API
-    docker run -v /Users/cvneste/mnt/vsc/resources:/resources \
-               -v /Users/cvneste/mnt/vsc/vsc40603/data:/data \
-	       -v /Users/cvneste/mnt/vsc/vsc40603/results:/results \
-	       --env-file ~/.BASESPACE_API \
-	       8ab716d0a38f RNAseq --project 2016_BRIP1kd_SVH --datadir /data --forwardprob 0
+     docker build . --tag beukueb/genairics:latest
+     docker push beukueb/genairics:latest
+     docker tag beukueb/genairics:latest genairics
 
 To debug, reset entrypoint:
 
