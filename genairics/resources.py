@@ -15,7 +15,7 @@ from genairics import gscripts
 resourcedir = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources'))
 logresources = logging.Logger('genairics.resources')
 
-def requestFiles(urlDir,outdir,fileregex):
+def requestFiles(urlDir,fileregex,outdir):
     """
     Download a set of files that match fileregex from urlDir
     """
@@ -45,6 +45,14 @@ def requestFiles(urlDir,outdir,fileregex):
                 if csum != checksums.checksum[l]:
                     logresources.warning('%s checksum did not match url location %s',csum,urlDir)
 
+# Tasks
+class InstallDependencies(luigi.Task):
+    """
+    Installs the genairics dependency programs
+    """
+    def run(self):
+        local[gscripts % 'genairics_dependencies.sh']
+    
 class RetrieveGenome(luigi.Task):
     """
     Prepares the genome
@@ -62,13 +70,13 @@ class RetrieveGenome(luigi.Task):
         local['mkdir']('-p',self.output().path+'_retrieving/dna')
         local['mkdir']('-p',self.output().path+'_retrieving/annotation')
         requestFiles(
-            'http://ftp.ensembl.org/ensembl/pub/release-{release}/fasta/{species}/dna/'.format(
+            'http://ftp.ensembl.org/pub/release-{release}/fasta/{species}/dna/'.format(
                 species=self.genome, release=self.release),
             r'.+.dna.chromosome.+.fa.gz',
             self.output().path+'_retrieving/dna'
         )
         requestFiles(
-            'http://ftp.ensembl.org/ensembl/pub/release-{release}/gtf/{species}/'.format(
+            'http://ftp.ensembl.org/pub/release-{release}/gtf/{species}/'.format(
                 species=self.genome, release=self.release),
             r'.+.{release}.gtf.gz'.format(release=self.release),
             self.output().path+'_retrieving/annotation'

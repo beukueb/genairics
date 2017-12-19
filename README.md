@@ -84,6 +84,10 @@ Python 3 has to be installed: see https://www.python.org/downloads/ for instruct
      workon genairics #only when working in virtualenv
      pip3 install genairics
 
+Start up console with `genairics console` and execute the following line:
+
+    InstallDependencies()
+
 ### Get your BASESPACE_API_TOKEN accessToken
 
 Folow the steps 1-5 from this link:
@@ -129,6 +133,16 @@ Choose a different prefix, if you want dependencies installed in different dir
     PREFIX=$VSC_DATA_VO/resources genairics/scripts/genairics_dependencies.sh
 
 ## Development
+
+### Mac OS X
+
+#### Setup
+
+Install brew: https://docs.brew.sh/Installation.html
+
+    brew install python3
+    brew install homebrew/core/fastqc
+    pip3 install --user genairics
 
 ### HPC
 

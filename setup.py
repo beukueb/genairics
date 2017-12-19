@@ -1,7 +1,7 @@
 from setuptools import setup
 
 package = 'genairics'
-version = '0.1.10'
+version = '0.1.11'
 
 setup(name = package,
       version = version,
@@ -18,6 +18,9 @@ setup(name = package,
           'pandas',
           'requests',
       ],
+      extras_require = {
+        'interactive_console':  ["ipython"]
+      },
       package_data = {
           'genairics': [
               'scripts/genairics_dependencies.sh',

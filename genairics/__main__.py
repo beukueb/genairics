@@ -54,12 +54,19 @@ def main(args=None):
                                        help=param.description)
             else: subparser.add_argument(paran, type=typeMapping[type(param)], help=param.description)
 
-    # Install dependencies option
+    # Console option
+    def startConsole():
+        import IPython
+        import genairics, genairics.datasources, genairics.resources
+        from genairics.resources import InstallDependencies
+        IPython.embed()
+        exit()
+        
     subparser = subparsers.add_parser(
-        'install_dependencies',
-        help='Install the genairics user dependencies'
+        'console',
+        help='Start console were tasks can be started'
     )
-    subparser.set_defaults(function=local[gscripts % 'genairics_dependencies.sh'])
+    subparser.set_defaults(function=startConsole)
     
     if args is None:
         # if arguments are set in environment, they are used as the argument default values
