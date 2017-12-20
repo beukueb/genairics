@@ -1,3 +1,6 @@
+[![Latest Version](https://img.shields.io/pypi/v/genairics.svg)](https://pypi.python.org/pypi/genairics/)
+[![Docker](https://img.shields.io/docker/automated/beukueb/genairics.svg)](https://hub.docker.com/r/beukueb/genairics/)
+[![License](https://img.shields.io/pypi/l/genairics.svg)](https://pypi.python.org/pypi/genairics/)
 ```
       _______
       -------
