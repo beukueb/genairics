@@ -19,7 +19,8 @@ setup(name = package,
           'requests',
       ],
       extras_require = {
-        'interactive_console':  ["ipython"]
+          'interactive_console':  ["ipython"],
+          'simulation': ["gffutils"]
       },
       package_data = {
           'genairics': [

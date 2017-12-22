@@ -3,6 +3,7 @@
 import luigi, logging, os, sys, itertools
 from luigi.util import inherits
 from genairics import setupProject
+from genairics.resources import RetrieveGenome
 
 @inherits(setupProject)
 class BaseSpaceSource(luigi.Task):
@@ -89,3 +90,55 @@ class ENAsource(luigi.Task):
     Downloads fastq's from given ENA accession number
     """
     ENAaccession = luigi.Parameter('',description='sequencing run project name')
+
+@inherits(setupProject)
+@inherits(RetrieveGenome)
+class ENAtestSource(luigi.Task):
+    """
+    Downloads fastq's from given ENA accession number
+    """
+    def requires(self):
+        return [
+            self.clone(setupProject)
+            self.clone(RetrieveGenome)
+        ]
+
+    def run(self):
+        import requests
+        r = requests.get('https://www.ebi.ac.uk/ena/data/taxonomy/v1/taxon/scientific-name/{}'.format(
+            genome.replace('_','%20'))
+        )
+        taxID = r.json()[0]['taxId']
+        r = requests.get('https://www.ebi.ac.uk/ena/data/view/Taxon:{}&portal=read_experiment;display=xml'.format(taxID))
+        #https://www.ebi.ac.uk/ena/data/warehouse/search?query=%22cell_line=%22IMR-32%22%22&domain=sample
+        #https://www.ebi.ac.uk/ena/data/warehouse/search?query=%22geo_accession=%22GSE37599%22%22&domain=study
+        raise NotImplementedError
+
+    
+@inherits(setupProject)
+@inherits(RetrieveGenome)
+class SimulatedSource(luigi.Task):
+    def requires(self):
+        return [
+            self.clone(setupProject)
+            self.clone(RetrieveGenome)
+        ]
+
+    def run(self):
+        import gffutils
+        #transform func needed for ensembl gtf => see gffutils docs examples
+        def transform_func(x):
+            if 'transcript_id' in x.attributes:
+                x.attributes['transcript_id'][0] += '_transcript'
+            return x
+        db = gffutils.create_db(
+            glob.glob(os.path.join(self.input()[1].path,'annotation/*.gtf'))[0],':memory:',
+            id_spec={'gene': 'gene_id', 'transcript': "transcript_id"},
+            merge_strategy="create_unique",
+            transform=transform_func,
+            keep_order=True
+        )
+        transcripts = db.features_of_type('transcript')
+        #TODO work in progress
+        #get transcripts -> to fasta file -> then R polyester for simulation
+        raise NotImplementedError
