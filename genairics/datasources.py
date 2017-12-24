@@ -99,7 +99,7 @@ class ENAtestSource(luigi.Task):
     """
     def requires(self):
         return [
-            self.clone(setupProject)
+            self.clone(setupProject),
             self.clone(RetrieveGenome)
         ]
 
@@ -120,7 +120,7 @@ class ENAtestSource(luigi.Task):
 class SimulatedSource(luigi.Task):
     def requires(self):
         return [
-            self.clone(setupProject)
+            self.clone(setupProject),
             self.clone(RetrieveGenome)
         ]
 

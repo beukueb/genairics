@@ -1,5 +1,5 @@
 # genairics
-# VERSION 0.0.1
+# VERSION 0.0.2
 # In the dockerfile, dependencies are put that require sudo or are provided by
 # modules in our university HPC cluster.
 # genairics_dependencies.sh, provides the dependencies that a regular user can install
@@ -17,7 +17,9 @@ RUN mkdir $GAX_REPOS
 ADD genairics/scripts/genairics_dependencies.sh $GAX_REPOS/genairics_dependencies.sh
 RUN $GAX_REPOS/genairics_dependencies.sh
 RUN if [ "$buildtype" = "production" ]; then pip install genairics; fi
-RUN if [ "$buildtype" = "development" ]; then git clone https://github.com/beukueb/genairics.git && cd genairics && pip install .; fi
+RUN if [ "$buildtype" = "development" ]; then \
+    git clone -b dev --single-branch https://github.com/beukueb/genairics.git &&\
+    cd genairics && pip install .; fi
 EXPOSE 8000
 VOLUME ["/resources"]
 VOLUME ["/data"]

@@ -4,6 +4,10 @@ set -x #Get all debugging info
 # Installs all dependencies for genairics to run its pipelines
 mkdir -p $GAX_REPOS && cd $GAX_REPOS
 
+# Enable genairics CLI argument completion
+# https://github.com/kislyuk/argcomplete/
+activate-global-python-argcomplete
+
 ## fastqc -> install with apt-get, brew, ...
 
 ## STAR

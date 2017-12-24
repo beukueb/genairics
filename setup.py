@@ -17,6 +17,7 @@ setup(name = package,
           'matplotlib',
           'pandas',
           'requests',
+          'argcomplete'
       ],
       extras_require = {
           'interactive_console':  ["ipython"],

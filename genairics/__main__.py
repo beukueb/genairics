@@ -1,7 +1,8 @@
 #!/ur/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 
 def main(args=None):
-    import argparse, os
+    import argparse, argcomplete, os
     from collections import OrderedDict
     from plumbum import local
     from genairics import gscripts, typeMapping, logger, runWorkflow
@@ -89,6 +90,7 @@ def main(args=None):
             args = parser.parse_args(args)
         else:
             #Script started directly
+            argcomplete.autocomplete(parser)
             args = parser.parse_args()
         #Make dict out of args namespace for passing to pipeline
         args = vars(args)
