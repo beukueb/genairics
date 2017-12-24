@@ -137,6 +137,11 @@ Choose a different prefix, if you want dependencies installed in different dir
 
 ## Development
 
+### Testing
+
+Tests can be run from the repo directory with `python3 setup.py test`. Tests are
+included for any pipelines referenced in papers and pipelines used by collaborators.
+
 ### Mac OS X
 
 #### Setup
