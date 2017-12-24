@@ -93,7 +93,7 @@ Start up console with `genairics console` and execute the following line:
 
 ### Get your BASESPACE_API_TOKEN accessToken
 
-Folow the steps 1-5 from this link:
+Follow the steps 1-5 from this link:
 https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-downloader/
 
 	emacs ~/.BASESPACE_API #Store your accessToke here, instead of emacs use any editor you like
