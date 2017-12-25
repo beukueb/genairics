@@ -19,7 +19,7 @@ class BaseSpaceSource(luigi.Task):
     basespace_API_file = luigi.Parameter(
         os.path.expanduser('~/.BASESPACE_API'),
         description = 'file that contains your basespace API token. Should only be readable by your user',
-        significant = False)
+        significant = False
     )
 
     def requires(self):
