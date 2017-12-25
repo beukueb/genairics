@@ -24,7 +24,7 @@ from plumbum import local, colors
 
 ## genairics configuration (integrated with luigi config)
 class genairics(luigi.Config):
-    general_log = luigi.Parameter(default='~/.genairics.log')
+    general_log = luigi.Parameter(default=os.path.expanduser('~/.genairics.log'))
     nodes = luigi.IntParameter(default=1,description='nodes to use to execute pipeline')
     threads = luigi.IntParameter(default=16,description='processors per node to request')
 

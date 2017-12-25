@@ -57,7 +57,7 @@ def main(args=None):
         subparser = subparsers.add_parser(
             pipeline,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            help='{} help'.format(pipeline)
+            help='genairics {} -h'.format(pipeline)
         )
         subparser.set_defaults(function=pipelines[pipeline])
         for paran,param in pipelines[pipeline].get_params():
@@ -76,7 +76,7 @@ def main(args=None):
         
     subparser = subparsers.add_parser(
         'console',
-        help='Start console were tasks can be started'
+        help='Start console where tasks can be started not available in the commandline interface'
     )
     subparser.set_defaults(function=startConsole)
     

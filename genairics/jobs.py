@@ -14,6 +14,7 @@ from genairics import logger, config
 class QueuJob(luigi.Task):
     """
     Submits a pipeline as a qsub job.
+    #TODO give option to wait until job finishes and print job stdout and stderr to console
     """
     job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a qsub job')
     resources = luigi.DictParameter(

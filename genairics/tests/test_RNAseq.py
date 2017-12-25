@@ -3,7 +3,7 @@
 from unittest.mock import Mock, MagicMock, patch, call
 from unittest import TestCase
 from genairics import runWorkflow, runTaskAndDependencies
-from genairics.RNAseq import RNAseqWorkflow
+from genairics.RNAseq import RNAseq
 import os, shutil, tempfile
 
 class test_RNAseq(TestCase):
@@ -14,9 +14,9 @@ class test_RNAseq(TestCase):
         os.mkdir(os.path.join(self.tempdir,'results'))
         self.genome = 'saccharomyces_cerevisiae'
         self.basespace_testproject = 'NSQ_Run240'
-        self.workflow = RNAseqWorkflow(datadir=self.datadir,
-                                  project=self.basespace_testproject,
-                                  genome=self.genome)
+        self.workflow = RNAseq(datadir=self.datadir,
+                               project=self.basespace_testproject,
+                               genome=self.genome)
 
     def tearDown(self):
         shutil.rmtree(self.datadir)
