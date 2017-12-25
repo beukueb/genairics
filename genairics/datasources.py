@@ -36,9 +36,17 @@ class BaseSpaceSource(luigi.Task):
         if not self.NSQrun:
             self.NSQrun = self.project
             logger.warning('NSQrun was not provided, assuming same as project %s' % self.project)
-        
+
+        # Load basespace token
+        if os.path.exists(self.basespace_API_file):
+            BASESPACE_API_TOKEN = open(self.basespace_API_file).read().strip().replace('BASESPACE_API_TOKEN=','')
+        elif 'BASESPACE_API_TOKEN' in os.environ:
+            BASESPACE_API_TOKEN = os.environ['BASESPACE_API_TOKEN']
+        else:
+            logger.error('BASESPACE_API_TOKEN not in file or environment')
+            raise Exception()
+
         # Find the project ID
-        BASESPACE_API_TOKEN = open(self.basespace_API_file).read().strip().replace('BASESPACE_API_TOKEN=','')
         request = 'http://api.basespace.illumina.com/v1pre3/users/current/projects?access_token=%s&limit=1000' % (BASESPACE_API_TOKEN,)
         r = requests.get(request)
         projectName = False
