@@ -16,14 +16,10 @@ class BaseSpaceSource(luigi.Task):
     with the project name.
     """
     NSQrun = luigi.Parameter('',description='sequencing run project name')
-    BASESPACE_API_TOKEN = (
-        luigi.Parameter(os.environ.get('BASESPACE_API_TOKEN'),
-                        description='BASESPACE_API_TOKEN already set'
-                        ,significant=False) if os.environ.get('BASESPACE_API_TOKEN')
-        else luigi.Parameter('NOT_YET_SET',
-                             description=
-                             'set "$BASESPACE_API_TOKEN" in your bash config files. not necessary or recommended to provide as CLI argument',
-                             significant=False)
+    basespace_API_file = luigi.Parameter(
+        os.path.expanduser('~/.BASESPACE_API'),
+        description = 'file that contains your basespace API token. Should only be readable by your user',
+        significant = False)
     )
 
     def requires(self):
@@ -42,7 +38,8 @@ class BaseSpaceSource(luigi.Task):
             logger.warning('NSQrun was not provided, assuming same as project %s' % self.project)
         
         # Find the project ID
-        request = 'http://api.basespace.illumina.com/v1pre3/users/current/projects?access_token=%s&limit=1000' % (self.BASESPACE_API_TOKEN,)
+        BASESPACE_API_TOKEN = open(self.basespace_API_file).read().strip().replace('BASESPACE_API_TOKEN=','')
+        request = 'http://api.basespace.illumina.com/v1pre3/users/current/projects?access_token=%s&limit=1000' % (BASESPACE_API_TOKEN,)
         r = requests.get(request)
         projectName = False
         for project in r.json()['Response']['Items']:
@@ -58,20 +55,20 @@ class BaseSpaceSource(luigi.Task):
         outtempdir = tempfile.mkdtemp(prefix=self.datadir+'/',suffix='/')
 
         # Find project sample IDs (max 1000)
-        request = 'http://api.basespace.illumina.com/v1pre3/projects/%s/samples?access_token=%s&limit=1000' % (projectID, self.BASESPACE_API_TOKEN)
+        request = 'http://api.basespace.illumina.com/v1pre3/projects/%s/samples?access_token=%s&limit=1000' % (projectID, BASESPACE_API_TOKEN)
         r = requests.get(request)
         for sample in r.json()['Response']['Items']:
             (sampleName, sampleID) = (sample['Name'], sample['Id'])
             logger.info('Retrieving '+sampleName)
             sampleDir = os.path.join(outtempdir, sampleName)
             os.mkdir(sampleDir)
-            sample_request = 'http://api.basespace.illumina.com/v1pre3/samples/%s/files?access_token=%s' % (sampleID, self.BASESPACE_API_TOKEN)
+            sample_request = 'http://api.basespace.illumina.com/v1pre3/samples/%s/files?access_token=%s' % (sampleID, BASESPACE_API_TOKEN)
             sample_request = requests.get(sample_request)
             for sampleFile in sample_request.json()['Response']['Items']:
                 filePath = os.path.join(sampleDir, sampleFile['Path'])
                 logger.info('Path: '+filePath)
                 if not os.path.isfile(filePath):
-                    file_request = 'http://api.basespace.illumina.com/%s/content?access_token=%s' % (sampleFile['Href'], self.BASESPACE_API_TOKEN)
+                    file_request = 'http://api.basespace.illumina.com/%s/content?access_token=%s' % (sampleFile['Href'], BASESPACE_API_TOKEN)
                     file_request = requests.get(file_request, stream=True)
                     with open(filePath,'wb') as outfile:
                         for chunk in file_request.iter_content(chunk_size=512):

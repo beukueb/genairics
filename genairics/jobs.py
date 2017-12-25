@@ -6,10 +6,10 @@ to for example a qsub system
 from plumbum import local, SshMachine
 from luigi.contrib.ssh import RemoteTarget
 from luigi.util import inherits
-import luigi
+import luigi, os, time
 
 # Tasks
-from genairics import setupProject
+from genairics import logger
 
 class QueuJob(luigi.Task):
     """
@@ -24,21 +24,36 @@ class QueuJob(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(job.datadir,job.project,self.task_family))
+            luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.job.datadir,self.job.project))
             if not self.remote else
-            RemoteTarget('{}/../results/{}/plumbing/completed_{}'.format(job.datadir,job.project,self.task_family))
+            RemoteTarget('{}/../results/{}/plumbing'.format(self.job.datadir,self.job.project),host=self.remote),
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.job.datadir,self.job.project,self.task_family))
+            if not self.remote else
+            RemoteTarget('{}/../results/{}/plumbing/completed_{}'.format(self.job.datadir,self.job.project,self.task_family),host=self.remote)
         )
 
     def run(self):
         machine = SshMachine(self.remote) if self.remote else local
-        jobvariables = ['GENAIRICS_ENV_ARGS={}'.format(job.task_family),'LUIGI_SET_FRIENDLY=']
-        for n in job.get_param_names():
-            job.append('{}="{}"'.format(n,job.__getattribute__(n)))
+        jobvariables = ['GENAIRICS_ENV_ARGS={}'.format(self.job.task_family),'SET_LUIGI_FRIENDLY=']
+        for n in self.job.get_param_names():
+            if self.job.__getattribute__(n): jobvariables.append('{}={}'.format(n,self.job.__getattribute__(n)))
         qsub = machine['qsub'][
             '-l','walltime={}'.format(self.resources['walltime']),
             '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.resources['ppn']),
-            '-v',','.join(jobvariables)
         ]
-        qsubID = qsub('-v','',machine['genairics'])
-        machine['touch'](self.output().path)
+        qsubID = qsub('-v',','.join(jobvariables),machine['genairics'])
+        logger.warning('qsub job submitted with ID %s. Waiting for result dir to be ready...',qsubID)
+        # Wait until pipeline project result dir exists
+        while not self.output()[0].exists():
+            time.sleep(60)
+        # When it is created during the job's execution, touch job submission completion file
+        machine['touch'](self.output()[1].path)
         if self.remote: machine.close()
+
+def DockerJob(args):
+    """
+    Submits a pipeline to be run in the genairics docker container.
+    """
+    raise NotImplementedError
+    #docker = local['docker']
+    #docker run -v ~/resources:/resources -v ~/data:/data -v ~/results:/results --env-file ~/.BASESPACE_API beukueb/genairics RNAseq -h
