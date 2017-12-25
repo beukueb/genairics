@@ -22,6 +22,14 @@ import luigi, os, logging
 from luigi.util import inherits
 from plumbum import local, colors
 
+## genairics configuration (integrated with luigi config)
+class genairics(luigi.Config):
+    general_log = luigi.Parameter(default='~/.genairics.log')
+    nodes = luigi.IntParameter(default=1,description='nodes to use to execute pipeline')
+    threads = luigi.IntParameter(default=16,description='processors per node to request')
+
+config = genairics()
+
 ## Helper function
 class LuigiStringTarget(str):
     """
@@ -38,8 +46,15 @@ gscripts = '{}/scripts/%s'.format(os.path.dirname(__file__))
 logger = logging.getLogger(__package__)
 logger.setLevel(logging.INFO)
 logconsole = logging.StreamHandler()
-logconsole.setLevel(logging.WARNING)
+logconsole.setLevel(logging.DEBUG)
 logger.addHandler(logconsole)
+if config.general_log:
+    logfile = logging.FileHandler(config.general_log)
+    logfile.setLevel(logging.WARNING)
+    logfile.setFormatter(
+        logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
+    )
+    logger.addHandler(logfile)
 
 typeMapping = {
     luigi.parameter.Parameter: str,

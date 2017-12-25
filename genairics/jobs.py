@@ -9,7 +9,7 @@ from luigi.util import inherits
 import luigi, os, time
 
 # Tasks
-from genairics import logger
+from genairics import logger, config
 
 class QueuJob(luigi.Task):
     """
@@ -17,7 +17,7 @@ class QueuJob(luigi.Task):
     """
     job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a qsub job')
     resources = luigi.DictParameter(
-        default = {'walltime':'20:00:00','nodes':1, 'ppn':4},
+        default = {'walltime':'20:00:00','nodes':config.nodes, 'ppn':config.threads},
         description = 'the resources that will be asked by the qsub job'
     )
     remote = luigi.Parameter('', description='provide ssh config remote name, if job is to be submitted remotely')
