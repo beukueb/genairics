@@ -6,11 +6,11 @@ def main(args=None):
     from collections import OrderedDict
     from plumbum import local
     from genairics import gscripts, typeMapping, logger, runWorkflow
-    from genairics.RNAseq import RNAseqWorkflow
+    from genairics.RNAseq import RNAseq
     from genairics.ChIPseq import fastqcSample
 
     pipelines = OrderedDict((
-        ('RNAseq',RNAseqWorkflow),
+        ('RNAseq',RNAseq),
         ('ChIPseq',fastqcSample)
     ))
     

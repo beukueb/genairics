@@ -219,7 +219,7 @@ class diffexpTask(luigi.Task):
 
 @inherits(BaseSpaceSource)
 @inherits(diffexpTask)
-class RNAseqWorkflow(luigi.WrapperTask):
+class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
