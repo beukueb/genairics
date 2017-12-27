@@ -184,3 +184,10 @@ To debug, reset entrypoint:
 #### Cleaning docker containers/images
 
      docker system prune -f
+
+### Build distribution package
+
+    workon genairics
+    pip install pyinstaller
+    pyinstaller __main__.spec
+    dist/genairics/genairics -h
