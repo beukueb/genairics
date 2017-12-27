@@ -3,7 +3,7 @@
 import os, sys
 
 def main(args=None):
-    import argparse, argcomplete, os
+    import argparse, argcomplete, os, logging
     from collections import OrderedDict
     from plumbum import local
     from genairics import gscripts, typeMapping, logger, runWorkflow
@@ -51,6 +51,7 @@ def main(args=None):
     parser.add_argument('--job-launcher', default = 'native', choices = joblaunchers.keys(),
                         help='choose where and how the job will run')
     parser.add_argument('--remote-host', default = '', help = 'submit job through ssh')
+    parser.add_argument('--verbose', action = 'store_true', help = 'verbose output')
 
     # Pipeline subparsers
     subparsers = parser.add_subparsers(help='sub-command help')
@@ -109,8 +110,13 @@ def main(args=None):
 
     joblauncher = joblaunchers[args.pop('job_launcher')]
     remotehost = args.pop('remote_host')
+    verbose = args.pop('verbose')
     workflow = args.pop('function')(**args)
 
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else: logger.setLevel(logging.INFO)
+    
     if joblauncher:
         joblauncher(job=workflow,remote=remotehost).run()
     else: runWorkflow(workflow)
