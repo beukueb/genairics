@@ -149,7 +149,7 @@ included for any pipelines referenced in papers and pipelines used by collaborat
 Install brew: https://docs.brew.sh/Installation.html
 
     brew install python3
-    brew install homebrew/core/fastqc
+    brew install homebrew/core/fastqc homebrew/science/bedtools
     pip3 install --user genairics
 
 ### HPC

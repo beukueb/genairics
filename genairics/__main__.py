@@ -1,5 +1,6 @@
 #!/ur/bin/env python
 # PYTHON_ARGCOMPLETE_OK
+import os, sys
 
 def main(args=None):
     import argparse, argcomplete, os
@@ -114,5 +115,17 @@ def main(args=None):
         joblauncher(job=workflow,remote=remotehost).run()
     else: runWorkflow(workflow)
 
+# If only program name is entered generate GUI
+if len(sys.argv) == 1:
+    from gooey import Gooey
+    main = Gooey(
+        advanced=True,
+        program_description='genairics: generic airtight omics pipelines'
+    )(main)
+    # Disable stdout buffering so gooey has smooth output
+    nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 1)
+    sys.stdout = nonbuffered_stdout
+
+# Run main program logics when script called directly
 if __name__ == "__main__":
     main()

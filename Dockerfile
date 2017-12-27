@@ -11,7 +11,7 @@ ARG buildtype=production
 ENV GAX_REPOS=/repos
 ENV GAX_PREFIX=/usr
 ENV GAX_RESOURCES=/resources
-RUN apt-get update && apt-get install -y git unzip rsync default-jre fastqc r-base
+RUN apt-get update && apt-get install -y git unzip rsync default-jre fastqc bedtools r-base
 RUN Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
 RUN mkdir $GAX_REPOS
 ADD genairics/scripts/genairics_dependencies.sh $GAX_REPOS/genairics_dependencies.sh
