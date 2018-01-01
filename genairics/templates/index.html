@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>genairics wui</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  </head>
+  <body onload="displaySubmittedJobs()">
+    <div class="container">
+      <div class="jumbotron">
+	<h2>Submit genairics job</h2>
+	<div id="jobsList"></div>
+      </div>
+    {% for prog in jobargs %}
+      <h2>{{ prog }} form</h2>
+        <form method="post" action="/submitjob" id="jobform">
+	  <table><tr><td></td><td><h3>general options</h3></td></tr>
+          {% for arg in jobargs[prog] %}
+            {% if arg['type'] == 'subparser' %}
+              <tr><td>
+                <input type="radio" name="subparser" required value="{{
+							  arg['name'] }}" id="{{ arg['name'] }}"></td><td>
+		<label for="{{ arg['name'] }}"><h3>{{ arg['name'] }}</h3></label></td></tr>
+	        <fieldset>
+                {% for subarg in arg['args'] %}
+                  <tr><td><label for="{{ subarg['name'] }}">{{ subarg['name'] }}</label></td><td>
+                  <input class="form-control {{ arg['name'] }}-option
+				{% if subarg['positional'] %}positional{% endif %}" type="{{ subarg['type'] }}" name="{{
+                subarg['name'] }}" id="{{ subarg['name'] }}" value="{{ subarg['default']
+                }}" data-toggle="tooltip" title="{{ subarg['help'] }}"></td></tr>
+                {% endfor %}
+		</fieldset>  
+            {% else %}
+              <tr><td><label for="{{ arg['name'] }}">{{ arg['name'] }}</label></td><td>
+	      <input class="form-control global-option" type="{{ arg['type'] }}" name="{{ arg['name'] }}"
+            id="{{ arg['name'] }}" value="{{ arg['default'] }}" data-toggle="tooltip" title="{{ arg['help'] }}"></td></tr>
+            {% endif %}
+          {% endfor %}
+	  <tr><td></td><td><input id="submitJobButton" class="btn btn-primary" type="submit" value="Submit"></td></tr>
+        </table></form>
+	{% endfor %}
+
+	<div class="footer">
+          <p>&copy genairics</p>
+	</div>
+    </div>
+    <!--Scripts-->
+    <!--Reference:
+    https://medium.com/codingthesmartway-com-blog/pure-javascript-building-a-real-world-application-from-scratch-5213591cfcd6
+    -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="http://chancejs.com/chance.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="/static/js/main.js"></script>
+  </body>
+</html>

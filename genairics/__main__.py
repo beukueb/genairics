@@ -6,7 +6,7 @@ def main(args=None):
     import argparse, argcomplete, os, logging
     from collections import OrderedDict
     from plumbum import local
-    from genairics import gscripts, typeMapping, logger, runWorkflow
+    from genairics import config, gscripts, typeMapping, logger, runWorkflow
     from genairics.jobs import QueuJob
     from genairics.RNAseq import RNAseq
     from genairics.ChIPseq import fastqcSample
@@ -81,7 +81,7 @@ def main(args=None):
         help='Start console where tasks can be started not available in the commandline interface'
     )
     subparser.set_defaults(function=startConsole)
-    
+
     if args is None:
         # if arguments are set in environment, they are used as the argument default values
         # this allows seemless integration with PBS jobs
@@ -101,6 +101,11 @@ def main(args=None):
             )
             args+= optionals + positionals
             args = parser.parse_args(args)
+        #wui
+        elif len(sys.argv) == 1 and config.ui == 'wui':
+            from genairics.utils import jobserver
+            jobserver(parser)
+        #normal cli
         else:
             #Script started directly
             argcomplete.autocomplete(parser)
@@ -122,7 +127,8 @@ def main(args=None):
     else: runWorkflow(workflow)
 
 # If only program name is entered generate GUI
-if len(sys.argv) == 1:
+from genairics import config
+if len(sys.argv) == 1 and 'GENAIRICS_ENV_ARGS' not in os.environ and config.ui == 'gui':
     from gooey import Gooey
     main = Gooey(
         advanced=True,

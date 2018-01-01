@@ -1,7 +1,7 @@
 from setuptools import setup
 
 package = 'genairics'
-version = '0.1.14'
+version = '0.1.15'
 
 setup(name = package,
       version = version,
@@ -22,7 +22,8 @@ setup(name = package,
       ],
       extras_require = {
           'interactive_console':  ["ipython"],
-          'simulation': ["gffutils"]
+          'simulation': ["gffutils"],
+          'wui': ["Flask"]
       },
       package_data = {
           'genairics': [
