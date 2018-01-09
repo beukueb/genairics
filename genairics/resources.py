@@ -2,7 +2,8 @@
 """
 Tasks here prepare resources that are required for some
 pipeline tasks, and are generally available from the
-resources directory as specified by $GAX_RESOURCES
+resources directory as specified by $GAX_RESOURCES or
+in genairics config file 'resourcedir' option
 """
 from datetime import datetime, timedelta
 import luigi, os, sys, tempfile, pathlib, glob
@@ -10,9 +11,9 @@ from luigi.util import inherits
 from plumbum import local, colors
 import logging
 
-from genairics import gscripts
+from genairics import config, gscripts
 
-resourcedir = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources'))
+resourcedir = config.resourcedir
 logresources = logging.Logger('genairics.resources')
 
 #Set cksum program according to platform

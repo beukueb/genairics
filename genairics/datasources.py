@@ -6,6 +6,37 @@ from genairics import setupProject
 from genairics.resources import RetrieveGenome
 
 @inherits(setupProject)
+class mergeFASTQs(luigi.Task):
+    """
+    Merge fastqs if one sample contains more than one fastq
+    """
+    dirstructure = luigi.Parameter(default='multidir',
+                                   description='dirstructure of project datat directory: onedir (one file/sample) or multidir (one dir/sample)')
+    
+    def requires(self):
+        return self.clone_parent() #or self.clone(basespaceData)
+        
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/../results/{}/plumbing/{}.log'.format(self.datadir,self.project,self.task_family))
+        )
+
+    def run(self):
+        if self.dirstructure == 'multidir':
+            outdir = '{}/../results/{}/fastqs/'.format(self.datadir,self.project)
+            os.mkdir(outdir)
+            dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.project)).split()
+            for d in dirsFASTQs:
+                (local['ls'] >> (self.output()[1].path))('-lh','{}/{}/{}'.format(self.datadir,self.project,d))
+                (local['cat'] > outdir+d+'.fastq.gz')(
+                    *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.project,d))
+                )
+            os.rename('{}/{}'.format(self.datadir,self.project),'{}/{}_original_FASTQs'.format(self.datadir,self.project))
+            os.symlink(outdir,'{}/{}'.format(self.datadir,self.project), target_is_directory = True)
+        pathlib.Path(self.output()[0].path).touch()
+
+@inherits(setupProject)
 class BaseSpaceSource(luigi.Task):
     """
     Uses the BaseSpace API from Illumina for downloading.
