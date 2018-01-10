@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import luigi, logging, os, sys, itertools
+import luigi, logging, os, sys, itertools, glob
 from luigi.util import inherits
 from plumbum import local
 from genairics import setupProject
