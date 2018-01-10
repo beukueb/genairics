@@ -9,11 +9,11 @@ def main(args=None):
     from genairics import config, gscripts, typeMapping, logger, runWorkflow
     from genairics.jobs import QueuJob
     from genairics.RNAseq import RNAseq
-    from genairics.ChIPseq import fastqcSample
+    from genairics.ATACseq import ATACseq
 
     pipelines = OrderedDict((
         ('RNAseq',RNAseq),
-        ('ChIPseq',fastqcSample)
+        ('ATACseq',ATACseq)
     ))
 
     joblaunchers = OrderedDict((

@@ -103,10 +103,7 @@ class RetrieveBlacklist(luigi.Task):
     }
     
     def output(self):
-        return luigi.LocalTarget(
-            os.path.join(resourcedir,'ensembl/{species}/release-{release}/blacklist.bed.gz'.format(
-                species=self.genome,release=self.release))
-        )
+        return luigi.LocalTarget(os.path.join(self.input().path,'blacklist.bed.gz'))
 
     def run(self):
         if (self.genome, self.release) not in self.availableBlacklists:
@@ -119,8 +116,6 @@ class STARandRSEMindex(luigi.Task):
     """
     Index that can be used by both STAR aligner and RSEM counter for transcriptomics
     """
-    threads = luigi.IntParameter(default=1, description='STAR threads to use to build mapping index')
-
     def requires(self):
         return self.clone_parent()
     
@@ -141,7 +136,7 @@ class STARandRSEMindex(luigi.Task):
         os.mkdir(self.output()[0].path)
         stdout = local[gscripts % 'buildRSEMindex.sh'](
             *glob.glob(os.path.join(genomeDir,'annotation')+'/*.gtf'),
-            self.threads,
+            config.threads,
             ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
             os.path.join(self.output()[0].path, self.genome)
         )
@@ -156,7 +151,6 @@ class STARindex(luigi.Task):
 
     NOT YET TESTED, for the moment use STARandRSEMindex
     """
-    threads = luigi.IntParameter(default=1, description='STAR threads to use to build mapping index')
     sjdbOverhang = luigi.IntParameter(default=100, description='library prep read length. default of 100 should generally be ok')
     
     def requires(self):
@@ -178,7 +172,7 @@ class STARindex(luigi.Task):
         genomeDir = self.input().path
         os.mkdir(self.output()[0].path)
         stdout = local['STAR'](
-            '--runThreadN', self.threads,
+            '--runThreadN', config.threads,
             '--runMode', 'genomeGenerate',
             '--genomeDir', os.path.join(self.output()[0].path, self.genome),
             '--genomeFastaFiles', ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),

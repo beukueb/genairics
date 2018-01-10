@@ -125,46 +125,74 @@ class SamBedFilteringTask(luigi.Task):
             sample = os.path.basename(sampleFile)
             
             # Filtering mapped reads
-            local['samtools'](
+            stdout = local['samtools'](
                 'view', '-b', '-q', 4, '-@', 2,
                 '-o', os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
 	        os.path.join(sampleFile,"Aligned.sortedByCoord.out.bam")
             )
+            logger.info(stdout)
 
             #Filtering blacklisted genomic regions
             if self.filterBlacklist and self.genome in {'homo_sapiens'}:
                 blacklist = RetrieveBlacklist(genome=self.genome,release=self.release)
                 if not blacklist.complete(): blacklist.run()
-                local['bedtools'](
+                (local['bedtools'][
                     'intersect', '-v', '-abam',
                     os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
-                    '-b', blacklist.output().path) > os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")
+                    '-b', blacklist.output().path] > os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"))()
+                logger.info("blacklist filtering finished")
             else:
                 os.rename(
                     os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
                     os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")
                 )
-                
+                logger.info("without blacklist filtering")
+
+            # Indexing final filtered file
+            stdout = local['samtools']('index', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"))
+            logger.info(stdout)
+            
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
 @requires(SamBedFilteringTask)
 class PeakCallingTask(luigi.Task):
     """
-    cd $TMPDIR/alignmentResults/${fastq%%.*}
-    ~/venvs/macs2env/bin/macs2 callpeak -t $TMPDIR/alignmentResults/${fastq%%.*}/Filtered.sortedByCoord.minMQ4.bam -n ${fastq%%.*} \
-			       --nomodel --nolambda --keep-dup all --call-summits
-    samtools index Filtered.sortedByCoord.minMQ4.bam
-#    ~/venvs/macs2env/bin/bamCoverage -p 16 --normalizeUsingRPKM --extendReads \
-    ~/venvs/macs2env/bin/bamCoverage -p 16 --normalizeTo1x 2451960000 --extendReads \
-				     -b Filtered.sortedByCoord.minMQ4.bam \
-				     -o Filtered.sortedByCoord.minMQ4.coverage.bw    
+    MACS2 peak calling
+
+    Work in progress -> still decide how to normalize for bw file
+    --normalizeUsingRPKM
+    --normalizeTo1x 2451960000  
     """
     def output(self):
         return (
             luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
             self.input()[1] # forward inherited alignment dir
         )
+
+    def run(self):
+        for sampleFile in glob.glob(os.path.join(self.input()[1].path,'*')):
+            sample = os.path.basename(sampleFile)
+            with local.env(MACS2_MODULE="SET"):
+                stdout = local['bash']['-i','-c',
+                    ' '.join([
+                        'macs2', 'callpeak', '-t',
+                        os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+                        '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
+                        '--keep-dup', 'all', '--call-summits'
+                    ])]()
+                logger.info(stdout)
+            with local.env(DEEPTOOLS_MODULE="SET"):
+                stdout = local['bash']['-i','-c',
+                    ' '.join([
+                        'bamCoverage', '-p', str(config.threads), '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
+			'-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+			'-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
+                    ])]()
+                logger.info(stdout)
+
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
     
 @inherits(BaseSpaceSource)
 @inherits(alignATACsamplesTask)

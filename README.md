@@ -110,6 +110,8 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
     export PATH=$VSC_DATA_VO/resources/bin:$PATH:~/.local/bin
     if [[ -v SET_LUIGI_FRIENDLY ]]; then module load pandas; unset SET_LUIGI_FRIENDLY; fi
     if [[ -v R_MODULE ]]; then module purge; module load R-bundle-Bioconductor; unset R_MODULE; fi
+    if [[ -v MACS2_MODULE ]]; then module purge; module load MACS2; unset MACS2_MODULE; fi
+    if [[ -v DEEPTOOLS_MODULE ]]; then module purge; module load deepTools; unset DEEPTOOLS_MODULE; fi
 
 #### Execute the following commands
 
