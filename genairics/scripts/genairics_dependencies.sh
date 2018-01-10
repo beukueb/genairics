@@ -36,5 +36,3 @@ for program in $(ls bin); do
     ln -s $GAX_REPOS/bedtools2/bin/$program $GAX_PREFIX/bin/$program
 done
 cd $GAX_REPOS
-
-## MACS2
