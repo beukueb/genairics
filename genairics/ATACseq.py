@@ -14,7 +14,7 @@ import logging
 ## Tasks
 from genairics import config, logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
-from genairics.resources import resourcedir, STARandRSEMindex
+from genairics.resources import resourcedir, STARandRSEMindex, RetrieveBlacklist
 from genairics.RNAseq import qualityCheck
 
 ### ATAC specific Tasks
