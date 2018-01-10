@@ -90,12 +90,12 @@ class alignATACsamplesTask(luigi.Task):
         if self.pairedEnd: raise NotImplementedError('paired end not yet implemented')
         
         # Make output directory
-        os.mkdir(self.output()[1].path)
+        if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks
         for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
             sample = os.path.basename(fastqfile).replace('.fastq.gz','')
-            yield alignATACsampleTask(
+            alignATACsampleTask( #OPTIONAL future implement with yield
                 genomeDir=self.input()['genome'][0].path,
                 readFilesIn=fastqfile,
                 outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
