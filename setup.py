@@ -18,12 +18,11 @@ setup(name = package,
           'pandas',
           'requests',
           'argcomplete',
-          'Gooey' 
       ],
       extras_require = {
           'interactive_console':  ["ipython"],
           'simulation': ["gffutils"],
-          'wui': ["Flask"]
+          'wui': ["Flask", "Gooey"]
       },
       package_data = {
           'genairics': [
