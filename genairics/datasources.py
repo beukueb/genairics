@@ -2,6 +2,7 @@
 
 import luigi, logging, os, sys, itertools
 from luigi.util import inherits
+from plumbum import local
 from genairics import setupProject
 from genairics.resources import RetrieveGenome
 
