@@ -7,7 +7,7 @@ in genairics config file 'resourcedir' option
 """
 from datetime import datetime, timedelta
 import luigi, os, sys, tempfile, pathlib, glob
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local, colors
 import logging
 

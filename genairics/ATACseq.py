@@ -6,7 +6,7 @@ ATAC sequencing pipeline starting from BaseSpace fastq project
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local, colors
 import pandas as pd
 import logging
