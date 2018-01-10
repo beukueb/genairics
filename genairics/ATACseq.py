@@ -48,12 +48,11 @@ class alignATACsampleTask(luigi.Task):
         return luigi.LocalTarget(self.outFileNamePrefix)
 
     def run(self):
+        os.mkdir(self.outFileNamePrefix)
         stdout = local['STAR'](
             '--runThreadN', self.runThreadN,
             '--runMode', self.runMode,
-            '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
-                species=self.genome,release=self.release
-            ),
+            '--genomeDir', self.genomeDir,
             '--readFilesIn', self.readFilesIn,
             '--readFilesCommand', self.readFilesCommand,
 	    '--outFileNamePrefix', self.outFileNamePrefix,
@@ -91,13 +90,13 @@ class alignATACsamplesTask(luigi.Task):
         if self.pairedEnd: raise NotImplementedError('paired end not yet implemented')
         
         # Make output directory
-        os.mkdir(self.output()[1])
+        os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks
         for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
             sample = os.path.basename(fastqfile).replace('.fastq.gz','')
             yield alignATACsampleTask(
-                genomeDir=os.path.join(self.input()['genome'][1].path,self.genome),
+                genomeDir=self.input()['genome'][0].path,
                 readFilesIn=fastqfile,
                 outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in alignSTARconfig.get_param_names()}

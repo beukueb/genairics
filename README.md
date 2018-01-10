@@ -103,10 +103,13 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 
 #### add to your HPC ~/.bashrc =>
 
+    export GAX_RESOURCES=$VSC_DATA_VO/resources
+    export GAX_DATADIR=$VSC_DATA_VO_USER/data
+    export GAX_RESULTSDIR=$VSC_DATA_VO_USER/results
+    export BASESPACE_API_TOKEN= #Set this to your basespace api token
+    export PATH=$VSC_DATA_VO/resources/bin:$PATH:~/.local/bin
     if [[ -v SET_LUIGI_FRIENDLY ]]; then module load pandas; unset SET_LUIGI_FRIENDLY; fi
     if [[ -v R_MODULE ]]; then module purge; module load R-bundle-Bioconductor; unset R_MODULE; fi
-    export PATH=$VSC_DATA_VO/resources/bin:$PATH:~/.local/bin
-    export BASESPACE_API_TOKEN= #Set this to your basespace api token
 
 #### Execute the following commands
 
