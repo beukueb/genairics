@@ -175,7 +175,7 @@ class PeakCallingTask(luigi.Task):
         for sampleFile in glob.glob(os.path.join(self.input()[1].path,'*')):
             sample = os.path.basename(sampleFile)
             with local.env(MACS2_MODULE="SET"):
-                stdout = local['bash']['-i','-c',
+                stdout = local['bash']['-l','-c',
                     ' '.join([
                         'macs2', 'callpeak', '-t',
                         os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
@@ -184,7 +184,7 @@ class PeakCallingTask(luigi.Task):
                     ])]()
                 logger.info(stdout)
             with local.env(DEEPTOOLS_MODULE="SET"):
-                stdout = local['bash']['-i','-c',
+                stdout = local['bash']['-l','-c',
                     ' '.join([
                         'bamCoverage', '-p', str(config.threads), '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
 			'-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),

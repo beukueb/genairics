@@ -180,7 +180,7 @@ class diffexpTask(luigi.Task):
             raise Exception()
         with local.env(R_MODULE="SET"):
             local['bash'][
-                '-i','-c', ' '.join(
+                '-l','-c', ' '.join(
                     ['Rscript', gscripts % 'simpleDEvoom.R',
                      self.project, self.datadir, self.metafile, self.design]
                 )]()
