@@ -129,3 +129,44 @@ class STARandRSEMindex(luigi.Task):
         )
         logresources.info(stdout)
         pathlib.Path(self.output()[1].path).touch()
+
+@inherits(RetrieveGenome)
+class STARindex(luigi.Task):
+    """
+    Index that can be used by STAR aligner for genome mapping 
+    (for genomic variant discovery, ChiPseq, ATACseq, )
+
+    NOT YET TESTED, for the moment use STARandRSEMindex
+    """
+    threads = luigi.IntParameter(default=1, description='STAR threads to use to build mapping index')
+    sjdbOverhang = luigi.IntParameter(default=100, description='library prep read length. default of 100 should generally be ok')
+    
+    def requires(self):
+        return self.clone_parent()
+    
+    def output(self):
+        return (
+            luigi.LocalTarget(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index_overhang{overhang}'.format(
+                    species=self.genome,release=self.release,overhang=self.sjdbOverhang))
+            ),
+            luigi.LocalTarget(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index_overhang{overhang}/build_completed'.format(
+                    species=self.genome,release=self.release,overhang=self.sjdbOverhang))
+            )
+        )
+    
+    def run(self):
+        genomeDir = self.input().path
+        os.mkdir(self.output()[0].path)
+        stdout = local['STAR'](
+            '--runThreadN', self.threads,
+            '--runMode', 'genomeGenerate',
+            '--genomeDir', os.path.join(self.output()[0].path, self.genome),
+            '--genomeFastaFiles', ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
+            '--sjdbOverhang', self.sjdbOverhang
+            
+        )
+        #TODO STAR Log.out will be produced should be moved to genome index dir
+        logresources.info(stdout)
+        pathlib.Path(self.output()[1].path).touch()

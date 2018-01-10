@@ -77,7 +77,7 @@ class alignATACsamplesTask(luigi.Task):
     
     def requires(self):
         return {
-            'genome':self.clone(STARandRSEMindex), #TODO need genome not transcriptome index
+            'genome':self.clone(STARandRSEMindex), #OPTIONAL use genome index only instead of the RSEM build transcriptome index
             'fastqs':self.clone(mergeFASTQs)
         }
 
@@ -97,7 +97,7 @@ class alignATACsamplesTask(luigi.Task):
         for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
             sample = os.path.basename(fastqfile).replace('.fastq.gz','')
             yield alignATACsampleTask(
-                genomeDir=self.input()['genome'][1].path,
+                genomeDir=os.path.join(self.input()['genome'][1].path,self.genome),
                 readFilesIn=fastqfile,
                 outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in alignSTARconfig.get_param_names()}
