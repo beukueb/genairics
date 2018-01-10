@@ -105,6 +105,67 @@ class alignATACsamplesTask(luigi.Task):
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
+@requires(alignATACsamplesTask)
+class SamBedFilteringTask(luigi.Task):
+    """
+    Filtering mapped reads on quality and optionally on blacklisted genomic regions 
+    (https://sites.google.com/site/anshulkundaje/projects/blacklists)
+    Blacklisting currently only for human data
+    """
+    filterBlacklist = luigi.BoolParameter(True,description="if human genome, filter blacklisted regions")
+    
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            self.input()[1] # forward inherited alignment dir
+        )
+
+    def run(self):
+        for sampleFile in glob.glob(os.path.join(self.input()[1].path,'*')):
+            sample = os.path.basename(sampleFile)
+            
+            # Filtering mapped reads
+            local['samtools'](
+                'view', '-b', '-q', 4, '-@', 2,
+                '-o', os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
+	        os.path.join(sampleFile,"Aligned.sortedByCoord.out.bam")
+            )
+
+            #Filtering blacklisted genomic regions
+            if self.filterBlacklist and self.genome in {'homo_sapiens'}:
+                blacklist = RetrieveBlacklist(genome=self.genome,release=self.release)
+                if not blacklist.complete(): blacklist.run()
+                local['bedtools'](
+                    'intersect', '-v', '-abam',
+                    os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
+                    '-b', blacklist.output().path) > os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")
+            else:
+                os.rename(
+                    os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
+                    os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")
+                )
+                
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
+
+@requires(SamBedFilteringTask)
+class PeakCallingTask(luigi.Task):
+    """
+    cd $TMPDIR/alignmentResults/${fastq%%.*}
+    ~/venvs/macs2env/bin/macs2 callpeak -t $TMPDIR/alignmentResults/${fastq%%.*}/Filtered.sortedByCoord.minMQ4.bam -n ${fastq%%.*} \
+			       --nomodel --nolambda --keep-dup all --call-summits
+    samtools index Filtered.sortedByCoord.minMQ4.bam
+#    ~/venvs/macs2env/bin/bamCoverage -p 16 --normalizeUsingRPKM --extendReads \
+    ~/venvs/macs2env/bin/bamCoverage -p 16 --normalizeTo1x 2451960000 --extendReads \
+				     -b Filtered.sortedByCoord.minMQ4.bam \
+				     -o Filtered.sortedByCoord.minMQ4.coverage.bw    
+    """
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            self.input()[1] # forward inherited alignment dir
+        )
+    
 @inherits(BaseSpaceSource)
 @inherits(alignATACsamplesTask)
 class ATACseq(luigi.WrapperTask):
@@ -114,3 +175,5 @@ class ATACseq(luigi.WrapperTask):
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
         yield self.clone(alignATACsamplesTask)
+        yield self.clone(SamBedFilteringTask)
+        yield self.clone(PeakCallingTask)

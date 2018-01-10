@@ -23,6 +23,16 @@ fi
 git clone https://github.com/deweylab/RSEM.git
 cd RSEM
 make
-cd ..
+cd $GAX_REPOS
 ln -s $GAX_REPOS/RSEM/rsem-prepare-reference $GAX_PREFIX/bin/rsem-prepare-reference
 ln -s $GAX_REPOS/RSEM/rsem-calculate-expression $GAX_PREFIX/bin/rsem-calculate-expression
+
+## bedtools
+wget https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz
+tar -zxvf bedtools-2.25.0.tar.gz
+cd bedtools2
+make
+for program in $(ls bin); do
+    ln -s $GAX_REPOS/bedtools2/bin/$program $GAX_PREFIX/bin/$program
+done
+cd $GAX_REPOS

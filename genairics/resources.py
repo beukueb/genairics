@@ -96,6 +96,24 @@ class RetrieveGenome(luigi.Task):
         #Rename temp dir to final/expected output dir
         os.rename(self.output().path+'_retrieving',self.output().path)
 
+@requires(RetrieveGenome)
+class RetrieveBlacklist(luigi.Task):
+    availableBlacklists = {
+        ('homo_sapiens', 91): "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz"
+    }
+    
+    def output(self):
+        return luigi.LocalTarget(
+            os.path.join(resourcedir,'ensembl/{species}/release-{release}/blacklist.bed.gz'.format(
+                species=self.genome,release=self.release))
+        )
+
+    def run(self):
+        if (self.genome, self.release) not in self.availableBlacklists:
+            raise NotImplementedError("blacklist for %s release %s is not available yet within genairics" % (self.genome,self.release))
+        stdout = local['wget'](self.availableBlacklists[(self.genome, self.release)], '-O', self.output().path)
+        logresources.info(stdout)
+
 @inherits(RetrieveGenome)
 class STARandRSEMindex(luigi.Task):
     """
