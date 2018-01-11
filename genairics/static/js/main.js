@@ -1,3 +1,26 @@
+function showPipeline(subparser) {
+    var form = document.getElementById('jobform');
+    // Clear positional required status in case a different subparser was chosen before
+    var allpositionals = form.getElementsByClassName("positional");
+    for (var i=0; allpositionals && i < allpositionals.length; i++) {
+	allpositionals[i].required = false;
+    }
+    // Check required positional elements for chosen subparser
+    var positionals = form.getElementsByClassName(subparser+"-option positional");
+    for (var i=0; positionals && i < positionals.length; i++) {
+	positionals[i].required = true;
+    }
+    // Show pipeline args and hide args from other pipelines
+    var allPipelineArgs = form.getElementsByClassName("pipeline-input-row");
+    for (var i=0; allPipelineArgs && i < allPipelineArgs.length; i++) {
+	allPipelineArgs[i].hidden = true;
+    }
+    var pipelineArgs = form.getElementsByClassName(subparser+"-arg");
+    for (var i=0; pipelineArgs && i < pipelineArgs.length; i++) {
+	pipelineArgs[i].hidden = false;
+    }
+}
+
 function displaySubmittedJobs() {
     var jobs = JSON.parse(localStorage.getItem('jobs'));
     var jobsList = document.getElementById('jobsList');
@@ -37,21 +60,7 @@ function submitJob(e) {
     // collect the form data while iterating over the inputs
     var form = document.getElementById('jobform');
     var subparser = form['subparser'].value;
-    // Check required positional elements for chosen subparser
-    var positionals = form.getElementsByClassName(subparser+"-option positional");
-    for (var i=0; positionals && i < positionals.length; i++) {
-	positionals[i].required = true;
-    }
-    if (! form.checkValidity()) {
-	window.setTimeout(x => document.getElementById("submitJobButton").click(),300);
-	return false;
-    }
-    // Clear positional required status in case a different subparser will be chosen next
-    // should refactor code to put required status on onclick radio button selection of subparser
-    var allpositionals = form.getElementsByClassName("positional");
-    for (var i=0; allpositionals && i < allpositionals.length; i++) {
-	allpositionals[i].required = false;
-    }
+    
     // Prepare data for submission
     var job = {};  // for local storage
     var data = {}; // to submit

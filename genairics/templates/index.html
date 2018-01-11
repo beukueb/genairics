@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -20,12 +20,12 @@
           {% for arg in jobargs[prog] %}
             {% if arg['type'] == 'subparser' %}
               <tr><td>
-                <input type="radio" name="subparser" required value="{{
+                <input type="radio" name="subparser" onchange="showPipeline(this.value)" required value="{{
 							  arg['name'] }}" id="{{ arg['name'] }}"></td><td>
 		<label for="{{ arg['name'] }}"><h3>{{ arg['name'] }}</h3></label></td></tr>
 	        <fieldset>
                 {% for subarg in arg['args'] %}
-                  <tr><td><label for="{{ subarg['name'] }}">{{ subarg['name'] }}</label></td><td>
+                  <tr class="pipeline-input-row {{ arg['name'] }}-arg" hidden><td><label for="{{ subarg['name'] }}">{{ subarg['name'] }}</label></td><td>
                   <input class="form-control {{ arg['name'] }}-option
 				{% if subarg['positional'] %}positional{% endif %}" type="{{ subarg['type'] }}" name="{{
                 subarg['name'] }}" id="{{ subarg['name'] }}" value="{{ subarg['default']
