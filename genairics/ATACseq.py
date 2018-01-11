@@ -174,19 +174,21 @@ class PeakCallingTask(luigi.Task):
     def run(self):
         for sampleFile in glob.glob(os.path.join(self.input()[1].path,'*')):
             sample = os.path.basename(sampleFile)
-            stdout = local['macs2'](
-                'callpeak', '-t',
-                os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
-                '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
-                '--keep-dup', 'all', '--call-summits'
-            )
+            with local.env(PYTHONPATH=''):
+                stdout = local['macs2'](
+                    'callpeak', '-t',
+                    os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+                    '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
+                    '--keep-dup', 'all', '--call-summits'
+                )
             logger.info(stdout)
-            stdout = local['bamCoverage'](
-                '-p', str(config.threads),
-                '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
-		'-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
-		'-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
-            )
+            with local.env(PYTHONPATH=''):
+                stdout = local['bamCoverage'](
+                    '-p', str(config.threads),
+                    '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
+		    '-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+		    '-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
+                )
             logger.info(stdout)
 
         # Check point

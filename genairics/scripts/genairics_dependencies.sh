@@ -51,7 +51,7 @@ done
 
 ## MACS2
 virtualenv --python=python2.7 $GAX_ENVS/macs2_env
-$GAX_ENVS/macs2_env/bin/pip install numpy MACS2
+$GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
 ln -s $GAX_ENVS/macs2_env/bin/macs2 $GAX_PREFIX/bin/macs2
 
 ## deeptools
@@ -65,6 +65,6 @@ make
 make install
 ### main package
 virtualenv --python=python3 $GAX_ENVS/deeptools_env
-$GAX_ENVS/deeptools_env/bin/pip install deeptools
+$GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
 ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
 
