@@ -181,7 +181,7 @@ class PeakCallingTask(luigi.Task):
                     '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
                     '--keep-dup', 'all', '--call-summits'
                 )
-            logger.info(stdout)
+            if stdout: logger.info(stdout)
             with local.env(PYTHONPATH=''):
                 stdout = local['bamCoverage'](
                     '-p', str(config.threads),
@@ -189,7 +189,7 @@ class PeakCallingTask(luigi.Task):
 		    '-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
 		    '-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
                 )
-            logger.info(stdout)
+            if stdout: logger.info(stdout)
 
         # Check point
         pathlib.Path(self.output()[0].path).touch()

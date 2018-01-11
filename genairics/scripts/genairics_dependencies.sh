@@ -51,20 +51,21 @@ done
 
 ## MACS2
 virtualenv --python=python2.7 $GAX_ENVS/macs2_env
-$GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
+PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
 ln -s $GAX_ENVS/macs2_env/bin/macs2 $GAX_PREFIX/bin/macs2
 
 ## deeptools
 ### dependencies
-#### cURL
-cd $GAX_REPOS
-git clone https://github.com/curl/curl.git && cd curl
-./buildconf
-./configure --prefix=$GAX_PREFIX
-make
-make install
+#### cURL -> so cURL module does not have to be loaded
+if [[ -v VSC_HOME ]]; then
+    cd $GAX_REPOS
+    git clone https://github.com/curl/curl.git && cd curl
+    ./buildconf
+    ./configure --prefix=$GAX_PREFIX
+    make
+    make install
+fi
 ### main package
 virtualenv --python=python3 $GAX_ENVS/deeptools_env
-$GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
+PYTHONPATH= $GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
 ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
-
