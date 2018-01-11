@@ -174,23 +174,20 @@ class PeakCallingTask(luigi.Task):
     def run(self):
         for sampleFile in glob.glob(os.path.join(self.input()[1].path,'*')):
             sample = os.path.basename(sampleFile)
-            with local.env(MACS2_MODULE="SET"):
-                stdout = local['bash']['-l','-c',
-                    ' '.join([
-                        'macs2', 'callpeak', '-t',
-                        os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
-                        '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
-                        '--keep-dup', 'all', '--call-summits'
-                    ])]()
-                logger.info(stdout)
-            with local.env(DEEPTOOLS_MODULE="SET"):
-                stdout = local['bash']['-l','-c',
-                    ' '.join([
-                        'bamCoverage', '-p', str(config.threads), '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
-			'-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
-			'-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
-                    ])]()
-                logger.info(stdout)
+            stdout = local['macs2'](
+                'callpeak', '-t',
+                os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+                '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
+                '--keep-dup', 'all', '--call-summits'
+            )
+            logger.info(stdout)
+            stdout = local['bamCoverage'](
+                '-p', str(config.threads),
+                '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
+		'-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
+		'-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
+            )
+            logger.info(stdout)
 
         # Check point
         pathlib.Path(self.output()[0].path).touch()

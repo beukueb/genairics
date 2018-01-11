@@ -9,6 +9,7 @@
 FROM python:3.6.3
 ARG buildtype=production
 ENV GAX_REPOS=/repos
+ENV GAX_ENVS=/envs
 ENV GAX_PREFIX=/usr
 ENV GAX_RESOURCES=/resources
 RUN apt-get update && apt-get install -y git unzip rsync default-jre fastqc bedtools r-base
