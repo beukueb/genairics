@@ -3,7 +3,7 @@
 import luigi, logging, os, sys, itertools, glob, pathlib
 from luigi.util import inherits
 from plumbum import local
-from genairics import setupProject
+from genairics import config, setupProject
 from genairics.resources import RetrieveGenome
 
 @inherits(setupProject)
