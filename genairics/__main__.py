@@ -97,7 +97,6 @@ def main(args=None):
     parses them and starts the workflow.
     """
     import argcomplete, os, logging
-    from plumbum import local
     from genairics import config, typeMapping, logger, runWorkflow
 
     parser, joblaunchers, pipelines = prepareParser()
@@ -126,13 +125,16 @@ def main(args=None):
         elif len(sys.argv) == 1 and config.ui == 'wui':
             from genairics.utils import jobserver
             jobserver(parser)
+            return "jobserver stopped" #has to return to avoid executing the rest of main function
         #normal cli
         else:
             #Script started directly
-            argcomplete.autocomplete(parser)
+            if config.ui == 'cli': argcomplete.autocomplete(parser)
             args = parser.parse_args()
-        #Make dict out of args namespace for passing to pipeline
-        args = vars(args)
+    else: args = parser.parse_args(args) # args passed to main function directly
+    
+    #Make dict out of args namespace for passing to pipeline
+    args = vars(args)
 
     # First check if it was requested to save config
     if args.pop('save_config'):
@@ -153,20 +155,9 @@ def main(args=None):
     else: logger.setLevel(logging.INFO)
     
     if joblauncher:
+        logger.debug('submitting %s to %s',workflow,joblauncher)
         joblauncher(job=workflow,remote=remotehost).run()
     else: runWorkflow(workflow)
-
-# If only program name is entered generate GUI
-from genairics import config
-if len(sys.argv) == 1 and 'GENAIRICS_ENV_ARGS' not in os.environ and config.ui == 'gui':
-    from gooey import Gooey
-    main = Gooey(
-        advanced=True,
-        program_description='genairics: generic airtight omics pipelines'
-    )(main)
-    # Disable stdout buffering so gooey has smooth output
-    nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 1)
-    sys.stdout = nonbuffered_stdout
 
 # Run main program logics when script called directly
 if __name__ == "__main__":

@@ -126,16 +126,19 @@ def webserver(parser,queue=None,jobstatus=None):
     app.run()
 
 def startJob(queue,jobstatus):
+    from genairics import logger
     while True:
         jobid,job = queue.get()
         jobstatus[jobid] = "started"
-        job()
+        stdout = job()
+        logger.info(stdout)
         jobstatus[jobid] = "finished"
         
 def jobserver(parser):
     import threading, queue, webbrowser, signal, sys
-    from genairics import config
-    
+    from genairics import config, logger
+    logger.setLevel('DEBUG')
+
     jobqueue = queue.Queue()
     jobstatus = {}
     threads = {

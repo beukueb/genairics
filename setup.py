@@ -22,7 +22,7 @@ setup(name = package,
       extras_require = {
           'interactive_console':  ["ipython"],
           'simulation': ["gffutils"],
-          'wui': ["Flask", "Gooey"]
+          'wui': ["Flask"]
       },
       package_data = {
           'genairics': [
@@ -31,7 +31,9 @@ setup(name = package,
               'scripts/RSEMcounts.sh',
               'scripts/STARaligning.sh',
 	      'scripts/qualitycheck.sh',
-              'scripts/simpleDEvoom.R'
+              'scripts/simpleDEvoom.R',
+              'templates/index.html',
+              'static/js/main.js'
           ]
       },
       include_package_data = True,
