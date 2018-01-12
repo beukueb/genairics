@@ -26,6 +26,7 @@ def prepareParser():
     ))
     
     parser = argparse.ArgumentParser(
+        prog = 'genairics',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=r'''
       _______
@@ -103,8 +104,9 @@ def main(args=None):
     
     if args is None:
         # if arguments are set in environment, they are used as the argument default values
+        # but only when no other arguments are passed on the command line
         # this allows seemless integration with PBS jobs
-        if 'GENAIRICS_ENV_ARGS' in os.environ:
+        if len(sys.argv) == 1 and 'GENAIRICS_ENV_ARGS' in os.environ:
             #Retrieve arguments from qsub job environment
             args = [os.environ['GENAIRICS_ENV_ARGS']]
             positionals = []
