@@ -4,8 +4,9 @@ import os, sys
 
 def prepareParser():
     """
-    Prepares the argument parser for genairics
+    Prepares the argument parser, joblaunchers and pipelines for genairics
     hooks up the different pipelines that are made available through the CLI
+    returns (parser, joblaunchers, pipelines)
     """
     import argparse
     from collections import OrderedDict
@@ -87,7 +88,7 @@ def prepareParser():
     )
     subparser.set_defaults(function=startConsole)
 
-    return parser
+    return parser, joblaunchers, pipelines
 
 def main(args=None):
     """
@@ -98,7 +99,7 @@ def main(args=None):
     from plumbum import local
     from genairics import config, typeMapping, logger, runWorkflow
 
-    parser = prepareParser()
+    parser, joblaunchers, pipelines = prepareParser()
     
     if args is None:
         # if arguments are set in environment, they are used as the argument default values

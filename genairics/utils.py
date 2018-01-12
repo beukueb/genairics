@@ -41,6 +41,7 @@ argparser2dict.typeDict = {
     float: 'number',
     str: 'text',
     None: 'checkbox'
+    # store_true does not have a type set on the argument element (TODO documentation!), only for general genairics options not luigi derived args
 }
 argparser2dict.filter = {'help','console','server'}
 
@@ -75,7 +76,7 @@ def dict2argparsed(argparsedict,typecheck=False):
 
 dict2argparsed.inputDict = {
     v:k for k,v in argparser2dict.typeDict.items() if k and k != int
-} # float and int are taken together
+} # float and int are taken together, None is not considered
 
 def webserver(parser,queue=None,jobstatus=None):
     from flask import Flask, request, render_template
