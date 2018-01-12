@@ -49,7 +49,7 @@ class BaseSpaceSource(luigi.Task):
     """
     NSQrun = luigi.Parameter('',description='sequencing run project name')
     basespace_API_file = luigi.Parameter(
-        os.path.expanduser('~/.BASESPACE_API'),
+        config.basespaceAPIfile,
         description = 'file that contains your basespace API token. Should only be readable by your user',
         significant = False
     )

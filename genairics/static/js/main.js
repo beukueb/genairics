@@ -36,13 +36,32 @@ function displaySubmittedJobs() {
 	
 	jobsList.innerHTML +=   '<div class="well">'+
 	    '<h6>Job ID: ' + id + '</h6>'+
-	    '<p><span class="label label-info">' + status + '</span></p>'+
+	    '<p><span class="label label-info" id="' + id + '">' + status + '</span></p>'+
 	    '<p><span class="glyphicon glyphicon-time"></span> ' + priority + ' '+
 	    '<span class="glyphicon glyphicon-user"></span> ' + mode + '</p>'+
 	    '<a href="#" class="btn btn-warning" onclick="checkStatus(\''+id+'\')">Check</a> '+
 	    '<a href="#" class="btn btn-danger" onclick="deleteJob(\''+id+'\')">Delete</a>'+
 	    '</div>';
     }
+}
+
+function checkStatus(id) {
+    // construct an HTTP request
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+	if (this.readyState == 4 && this.status == 200) {
+	    document.getElementById(id).innerHTML = this.responseText;
+	}
+    };
+    xhr.open("POST", "/checkstatus", true);
+    xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+    
+    // send the collected data as JSON
+    xhr.send(JSON.stringify({id:id}));
+    
+    xhr.onloadend = function () {
+        console.log(id)
+    };    
 }
 
 function deleteJob(id) {

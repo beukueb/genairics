@@ -37,11 +37,27 @@ class genairics(luigi.Config):
         default = os.environ.get('GAX_RESOURCES',os.path.expanduser('~/resources')),
         description = 'default directory where resources such as genomes are stored'
     )
+    basespaceAPIfile = luigi.Parameter(
+        default = os.path.expanduser('~/.BASESPACE_API'),
+        description = 'file containing BaseSpace API token'
+    )
     nodes = luigi.IntParameter(default=1,description='nodes to use to execute pipeline')
     threads = luigi.IntParameter(default=16,description='processors per node to request')
     ui = luigi.ChoiceParameter(default='wui',choices=['wui','gui','cli'],description='user interface mode')
 
 config = genairics()
+
+def saveConfig(configs):
+    """
+    saves every config in list configs to LUIGI_CONFIG_PATH destination,
+    or - if not provided - in 'luigi.cfg' in current working directory
+    """
+    if type(configs) != list: configs = [configs]
+    with open(os.environ.get('LUIGI_CONFIG_PATH','luigi.cfg'),'wt') as outconfig:
+        for config in configs:
+            outconfig.write('[{}]\n'.format(config.get_task_family()))
+            for param in config.get_param_names():
+                outconfig.write('{}={}\n'.format(param,config.__getattribute__(param)))
 
 ## Helper function
 class LuigiStringTarget(str):

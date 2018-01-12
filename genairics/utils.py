@@ -85,6 +85,16 @@ def webserver(parser,queue=None,jobstatus=None):
     def offerJob():
         jobargs = argparser2dict(parser)
         return render_template('index.html',jobargs=jobargs)
+
+    @app.route('/checkstatus',methods=['GET','POST'])
+    def checkJobStatus():
+        if request.json:
+            data = request.json
+            app.logger.debug("checking %s",data)
+            try:
+                return jobstatus[data["id"]]
+            except KeyError:
+                return "unknown (job submitted previously)"
     
     @app.route('/submitjob',methods=['GET','POST'])
     def takeJSONjob():
