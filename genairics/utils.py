@@ -40,7 +40,7 @@ argparser2dict.typeDict = {
     int: 'number',
     float: 'number',
     str: 'text',
-    None: None
+    None: 'checkbox'
 }
 argparser2dict.filter = {'help','console','server'}
 
@@ -74,7 +74,7 @@ def dict2argparsed(argparsedict,typecheck=False):
     return command.bound_command(*cli_arguments)
 
 dict2argparsed.inputDict = {
-    v:k for k,v in argparser2dict.typeDict.items() if k != int
+    v:k for k,v in argparser2dict.typeDict.items() if k and k != int
 } # float and int are taken together
 
 def webserver(parser,queue=None,jobstatus=None):
@@ -98,7 +98,7 @@ def webserver(parser,queue=None,jobstatus=None):
     
     @app.route('/submitjob',methods=['GET','POST'])
     def takeJSONjob():
-        app.logger.debug("genairics job submitted")
+        app.logger.info("genairics job submitted")
         app.logger.debug(request.json)
     
         if request.json:
@@ -111,10 +111,10 @@ def webserver(parser,queue=None,jobstatus=None):
                             arg['value'] = 'set'
                             for subarg in arg['args']:
                                 try: subarg['value'] = data[subarg['name']]
-                                except KeyError: app.logger.debug('pipeline option %s not set',subarg['name'])
+                                except KeyError: app.logger.warning('pipeline option %s not set',subarg['name'])
                     else:
                         try: arg['value'] = data[arg['name']]
-                        except KeyError: app.logger.debug('global option %s not set',arg['name'])
+                        except KeyError: app.logger.warning('global option %s not set',arg['name'])
             command = dict2argparsed(jobargs)
             if queue: queue.put((data.get("jobid"),command))
             return "Job %s submitted" % data.get("jobid")
@@ -132,7 +132,9 @@ def startJob(queue,jobstatus):
         jobstatus[jobid] = "finished"
         
 def jobserver(parser):
-    import threading, queue, signal, sys
+    import threading, queue, webbrowser, signal, sys
+    from genairics import config
+    
     jobqueue = queue.Queue()
     jobstatus = {}
     threads = {
@@ -141,6 +143,10 @@ def jobserver(parser):
     }
     for t in threads.values(): t.start()
 
+    # open genairics wui in webbrowser
+    if config.browser:
+        webbrowser.get(config.browser).open('http://127.0.0.1:5000/',new=2)
+    
     def signal_handler(signal, frame):
         print('You pressed Ctrl+C!')
         exit(0)

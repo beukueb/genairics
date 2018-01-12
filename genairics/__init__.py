@@ -44,6 +44,7 @@ class genairics(luigi.Config):
     nodes = luigi.IntParameter(default=1,description='nodes to use to execute pipeline')
     threads = luigi.IntParameter(default=16,description='processors per node to request')
     ui = luigi.ChoiceParameter(default='wui',choices=['wui','gui','cli'],description='user interface mode')
+    browser = luigi.Parameter('firefox', description = 'browser to use for wui')
 
 config = genairics()
 

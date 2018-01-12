@@ -2,11 +2,14 @@
 # PYTHON_ARGCOMPLETE_OK
 import os, sys
 
-def main(args=None):
-    import argparse, argcomplete, os, logging
+def prepareParser():
+    """
+    Prepares the argument parser for genairics
+    hooks up the different pipelines that are made available through the CLI
+    """
+    import argparse
     from collections import OrderedDict
-    from plumbum import local
-    from genairics import config, gscripts, typeMapping, logger, runWorkflow
+    from genairics import typeMapping
     from genairics.jobs import QueuJob
     from genairics.RNAseq import RNAseq
     from genairics.ATACseq import ATACseq
@@ -48,9 +51,11 @@ def main(args=None):
     from your project's result directory. Errors will also be printed to stdout.
     ''')
 
-    parser.add_argument('--job-launcher', default = 'native', choices = joblaunchers.keys(),
+    parser.add_argument('--job-launcher', default = 'native', type = str, choices = joblaunchers.keys(),
                         help='choose where and how the job will run')
-    parser.add_argument('--remote-host', default = '', help = 'submit job through ssh')
+    parser.add_argument('--remote-host', default = '', type = str, help = 'submit job through ssh')
+    parser.add_argument('--save-config', action = 'store_true',
+                        help = 'save path related default values to a configuration file in the directory where you started genairics')
     parser.add_argument('--verbose', action = 'store_true', help = 'verbose output')
 
     # Pipeline subparsers
@@ -82,6 +87,19 @@ def main(args=None):
     )
     subparser.set_defaults(function=startConsole)
 
+    return parser
+
+def main(args=None):
+    """
+    Checks where arguments are provided (directly to main function, environment, CLI),
+    parses them and starts the workflow.
+    """
+    import argcomplete, os, logging
+    from plumbum import local
+    from genairics import config, typeMapping, logger, runWorkflow
+
+    parser = prepareParser()
+    
     if args is None:
         # if arguments are set in environment, they are used as the argument default values
         # this allows seemless integration with PBS jobs
@@ -113,6 +131,15 @@ def main(args=None):
         #Make dict out of args namespace for passing to pipeline
         args = vars(args)
 
+    # First check if it was requested to save config
+    if args.pop('save_config'):
+        from genairics import saveConfig
+        for param in config.get_param_names():
+            if param in args:
+                config.__setattr__(param, args[param])
+        saveConfig(config)
+        
+    # Extract other non pipeline specific arguments
     joblauncher = joblaunchers[args.pop('job_launcher')]
     remotehost = args.pop('remote_host')
     verbose = args.pop('verbose')
