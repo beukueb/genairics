@@ -50,7 +50,7 @@ def dict2argparsed(argparsedict,typecheck=False):
     takes a arg dict and constructs the argparsed commandline 
     as a pumblum command ready for execution
 
-    values are optionally typechecked
+    values are optionally typechecked (NOT YET)
 
     WORK IN PROGRESS!
     """
