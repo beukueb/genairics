@@ -45,7 +45,7 @@ argparser2dict.typeDict = {
 }
 argparser2dict.filter = {'help','console','server'}
 
-def dict2argparsed(argparsedict,typecheck=False,plumbumCommand=False):
+def dict2argparsed(argparsedict,typecheck=False,plumbumCommand=True):
     """
     takes a arg dict and constructs the argparsed commandline 
     as a pumblum command ready for execution
