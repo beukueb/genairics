@@ -192,10 +192,13 @@ To debug, reset entrypoint:
 
     workon genairics
     pip install pyinstaller
-    pyinstaller __main__.spec
+    pyinstaller --onefile __main__.spec
     dist/genairics/genairics -h
 
 #### Mac OS X dmg
 
     workon genairics
-    pip install dmgbuild
+    pushd dist
+    hdiutil create ./genairics.dmg -srcfolder genuirics -ov
+    popd
+    

@@ -125,7 +125,7 @@ def main(args=None):
         elif len(sys.argv) == 1 and config.ui == 'wui':
             from genairics.utils import jobserver
             jobserver(parser)
-            return "jobserver threads fully operational" #has to return to avoid executing the rest of main function
+            return "jobserver shutting down" #has to return to avoid executing the rest of main function
         #normal cli
         else:
             #Script started directly

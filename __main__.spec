@@ -32,8 +32,6 @@ pkg_data = collect_pkg_data('genairics')  # <<< Put the name of your package her
 # <<< END ADDED PART
 
 block_cipher = None
-
-
 a = Analysis(['genairics/__main__.py'],
              pathex=['/Users/cvneste/Dropbox (speleman lab)/Personal/Tools/genairics'],
              binaries=[],
@@ -62,4 +60,8 @@ coll = COLLECT(exe,
                pkg_data,
                strip=False,
                upx=True,
-               name='genuirics')
+               name='genairics')
+app = BUNDLE(coll,
+             name='genairics.app',
+             icon=None,
+             bundle_identifier=None)

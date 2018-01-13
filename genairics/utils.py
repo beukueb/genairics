@@ -45,14 +45,10 @@ argparser2dict.typeDict = {
 }
 argparser2dict.filter = {'help','console','server'}
 
-def dict2argparsed(argparsedict,typecheck=False):
+def dict2argparsed(argparsedict,typecheck=False,plumbumCommand=False):
     """
     takes a arg dict and constructs the argparsed commandline 
     as a pumblum command ready for execution
-
-    values are optionally typechecked (NOT YET)
-
-    WORK IN PROGRESS!
     """
     from plumbum import local
     def recursive_args(arguments,cli_arguments):
@@ -72,13 +68,11 @@ def dict2argparsed(argparsedict,typecheck=False):
         command = local[prog]
         cli_arguments = []
         recursive_args(arguments[prog],cli_arguments)
-    return command.bound_command(*cli_arguments)
+    if plumbumCommand:
+        return command.bound_command(*cli_arguments)
+    else: return cli_arguments
 
-dict2argparsed.inputDict = {
-    v:k for k,v in argparser2dict.typeDict.items() if k and k != int
-} # float and int are taken together, None is not considered
-
-def webserver(parser,queue=None,jobstatus=None):
+def webserver(parser,queue,jobstatus,stopevent):
     from flask import Flask, request, render_template
     app = Flask('genairics')
 
@@ -96,6 +90,12 @@ def webserver(parser,queue=None,jobstatus=None):
                 return jobstatus[data["id"]]
             except KeyError:
                 return "unknown (job submitted previously)"
+
+    @app.route('/stopserver',methods=['GET'])
+    def stopserver():
+        stopevent.set()
+        if queue.empty(): queue.put((None,None))
+        return "Server closing down"
     
     @app.route('/submitjob',methods=['GET','POST'])
     def takeJSONjob():
@@ -125,13 +125,23 @@ def webserver(parser,queue=None,jobstatus=None):
 
     app.run()
 
-def startJob(queue,jobstatus):
+def startJob(queue,jobstatus,stopevent):
+    """
+    Starts the jobs.
+    To stop, stopevent needs to be set to true and
+    an item needs to be put on the queue incase it is 
+    empty, as the thread will otherwise hang waiting
+    for another job.
+    """
     from genairics import logger
+    from genairics.__main__ import main
     while True:
         jobid,job = queue.get()
+        if stopevent.is_set(): break
         jobstatus[jobid] = "started"
-        stdout = job()
+        stdout = job() # when the queue provides ready jobs
         logger.info(stdout)
+        #main(job)
         jobstatus[jobid] = "finished"
         
 def jobserver(parser):
@@ -139,22 +149,23 @@ def jobserver(parser):
     from genairics import config, logger
     logger.setLevel('DEBUG')
 
+    stopevent = threading.Event()
     jobqueue = queue.Queue()
     jobstatus = {}
     threads = {
-        'server': threading.Thread(target=webserver, args=(parser,jobqueue,jobstatus)),
-        'worker': threading.Thread(target=startJob, args=(jobqueue,jobstatus))
+        'server': threading.Thread(target=webserver, daemon=True, args=(parser,jobqueue,jobstatus,stopevent)),
+        'worker': threading.Thread(target=startJob, args=(jobqueue,jobstatus,stopevent))
     }
     for t in threads.values(): t.start()
 
     # open genairics wui in webbrowser
     if config.browser:
         webbrowser.get(config.browser).open('http://127.0.0.1:5000/',new=2)
-    
-    def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
-        exit(0)
-    signal.signal(signal.SIGINT, signal_handler)
-    print('Press Ctrl+C to exit genairics server')
-    signal.pause()
-    
+
+    threads['worker'].join()
+    #def signal_handler(signal, frame):
+    #    print('You pressed Ctrl+C!')
+    #    exit(0)
+    #signal.signal(signal.SIGINT, signal_handler)
+    #print('Press Ctrl+C to exit genairics server')
+    #signal.pause()
