@@ -98,9 +98,16 @@ class RetrieveGenome(luigi.Task):
 
 @requires(RetrieveGenome)
 class RetrieveBlacklist(luigi.Task):
+    """
+    Info on blacklists: https://sites.google.com/site/anshulkundaje/projects/blacklists
+
+    Available release:
+    91 => GRCh38
+    75 => GRCh37 (latest release of hg19)
+    """
     availableBlacklists = {
         ('homo_sapiens', 91): "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz",
-        ('homo_sapiens',37):
+        ('homo_sapiens', 75):
         "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg19-human/wgEncodeHg19ConsensusSignalArtifactRegions.bed.gz"
     }
     
