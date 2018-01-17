@@ -99,7 +99,9 @@ class RetrieveGenome(luigi.Task):
 @requires(RetrieveGenome)
 class RetrieveBlacklist(luigi.Task):
     availableBlacklists = {
-        ('homo_sapiens', 91): "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz"
+        ('homo_sapiens', 91): "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz",
+        ('homo_sapiens',37):
+        "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg19-human/wgEncodeHg19ConsensusSignalArtifactRegions.bed.gz"
     }
     
     def output(self):
