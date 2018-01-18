@@ -198,7 +198,7 @@ class PeakCallingTask(luigi.Task):
         pathlib.Path(self.output()[0].path).touch()
     
 @inherits(BaseSpaceSource)
-@inherits(alignATACsamplesTask)
+@inherits(PeakCallingTask)
 class ATACseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
