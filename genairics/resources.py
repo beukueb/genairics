@@ -68,7 +68,14 @@ class RetrieveGenome(luigi.Task):
     Prepares the genome
     """
     genome = luigi.Parameter(default='homo_sapiens',description="genome species name")
-    release = luigi.IntParameter(default=91,description="ensembl release number of genome")
+    release = luigi.IntParameter(default=91,
+                                 description=
+"""ensembl release number of genome
+for homo_sapiens, use the following :
+ 91 => GRCh38 aka hg38
+ 75 => GRCh37 aka hg19
+"""
+    )
 
     def output(self):
         return luigi.LocalTarget(

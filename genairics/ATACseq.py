@@ -165,6 +165,8 @@ class PeakCallingTask(luigi.Task):
     --normalizeUsingRPKM
     --normalizeTo1x 2451960000  
     """
+    callSummits = luigi.BoolParameter(default=False,description="lets MACS2 also call subpeaks")
+    
     def output(self):
         return (
             luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
@@ -179,7 +181,8 @@ class PeakCallingTask(luigi.Task):
                     'callpeak', '-t',
                     os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
                     '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
-                    '--keep-dup', 'all', '--call-summits'
+                    '--keep-dup', 'auto',
+                    *(('--call-summits',) if self.callSummits else ())
                 )
             if stdout: logger.info(stdout)
             with local.env(PYTHONPATH=''):
