@@ -1,10 +1,10 @@
 from setuptools import setup
 
-package = 'genairics'
-version = '0.1.22'
+package = "genairics"
+version = 0.1.23
 
 setup(name = package,
-      version = version,
+      version = 0.1.23
       description="GENeric AIRtight omICS pipelines",
       url='https://github.com/beukueb/genairics',
       author = 'Christophe Van Neste',
@@ -22,6 +22,7 @@ setup(name = package,
       extras_require = {
           'interactive_console':  ["ipython"],
           'simulation': ["gffutils"],
+          'ChIPseq' ["cutadapt"],
           'wui': ["Flask"]
       },
       package_data = {
