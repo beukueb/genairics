@@ -150,7 +150,7 @@ aliases in `.git/config`
 	updaterepoversion = !git config --local alias.repoversion '!echo '$(($(git repoversion)+1)) && git repoversion
 	updateversion = !sed -i -e 's/version = ".*"/version = "0.1.'$(git updaterepoversion)'"/' setup.py && git commitversion
 	commitversion = !git commit -am"subversion=$(git repoversion)"
-	tagversion = !git tag -a v0.1.$(git repoversion) -m "genairics version 0.1.$(git repoversion)"
+	tagversion = !git tag -a v0.1.$(git repoversion) -m 'genairics version 0.1.'$(git repoversion) && git push origin v0.1.$(git repoversion)
 	updatemaster = !git updateversion && git checkout master && git merge dev && git tagversion && git push public master && git checkout dev
 
 ### Testing
