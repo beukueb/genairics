@@ -139,6 +139,19 @@ Choose a different prefix, if you want dependencies installed in different dir
     PREFIX=$VSC_DATA_VO/resources genairics/scripts/genairics_dependencies.sh
 
 ## Development
+### git repo
+
+For new version do `git updatemaster`, which automates working from
+dev branch, merging to master and updating version with following
+aliases in `.git/config`
+
+	[alias]
+	repoversion = !echo 22
+	updaterepoversion = !git config --local alias.repoversion '!echo '$(($(git repoversion)+1)) && git repoversion
+	updateversion = !sed -i -e 's/version = ".*"/version = "0.1.'$(git updaterepoversion)'"/' setup.py && git commitversion
+	commitversion = !git commit -am"subversion=$(git repoversion)"
+	tagversion = !git tag -a v0.1.$(git repoversion) -m "genairics version 0.1.$(git repoversion)"
+	updatemaster = !git updateversion && git checkout master && git merge dev && git tagversion && git push public master && git checkout dev
 
 ### Testing
 
