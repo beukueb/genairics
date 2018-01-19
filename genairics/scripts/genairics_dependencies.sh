@@ -69,3 +69,14 @@ fi
 virtualenv --python=python3 $GAX_ENVS/deeptools_env
 PYTHONPATH= $GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
 ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
+
+## bowtie2
+### Info from http://bowtie-bio.sourceforge.net/bowtie2/faq.shtml
+# Does Bowtie 2 supersede Bowtie 1?
+# Mostly, but not entirely. If your reads are shorter than 50 bp, you might want to try both Bowtie 1 and Bowtie 2 and see # which gives better results in terms of speed and sensitivity. In our experiments, Bowtie 2 is generally superior to
+# Bowtie 1 for reads longer than 50 bp. For reads shorter than 50 bp, Bowtie 1 may or may not be preferable.
+cd $GAX_REPOS
+git clone https://github.com/BenLangmead/bowtie2.git && cd bowtie2
+# not using tbb lib => not a developer friendly library; no ./configure, prefix option, or make install
+make NO_TBB=1
+ln -s $GAX_REPOS/bowtie2/bowtie2 $GAX_PREFIX/bin/bowtie2

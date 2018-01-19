@@ -1,97 +1,49 @@
 #!/usr/bin/env python
 """
-Full pipeline starting from BaseSpace fastq project
+ChIP sequencing pipeline starting from BaseSpace fastq project
 """
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local, colors
 import pandas as pd
 import logging
 
-# matplotlib => setup for exporting svg figures only
-import matplotlib
-matplotlib.use('SVG')
-import matplotlib.pyplot as plt
-
 ## Tasks
-from genairics import setupProject, setupLogging
-from genairics.RNAseq import mergeFASTQs
+from genairics import config, logger, gscripts, setupProject
+from genairics.datasources import BaseSpaceSource, mergeFASTQs
+from genairics.resources import resourcedir, STARandRSEMindex, RetrieveBlacklist
+from genairics.RNAseq import qualityCheck
 
-### Single file tasks
-class Sample(luigi.Task):
+### ChIP specific Task
+class cutadapt(luigi.Config):
     """
-    This class simply describes the parameters needed to work with a sample.
-    When inherited tasks can process a sample.
+    Info: http://cutadapt.readthedocs.io/en/stable/guide.html
     """
-    sample = luigi.Parameter(description="sample filename")
-    resultdir = luigi.Parameter(description="general result directory")
-    extension = luigi.ChoiceParameter(choices=['fastq','fastq.gz'],default='fastq.gz')
+    adapter = luigi.Parameter(
+        default = "GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC",
+        description = "cutadapt adapter to trim"
+    )
+    errorRate = luigi.FloatParameter(
+        default = 0.1,
+        description = "allowed error rate => errors #/length mapping"
+    )
 
-    @property
-    def name(self):
-        return os.path.basename(self.sample)[:-1-len(self.extension)]
-        
-    def output(self):
-        return {
-            'sample': luigi.LocalTarget(self.sample),
-            'resultdir': luigi.LocalTarget(self.resultdir),
-            'sampleresults': luigi.LocalTarget('{}/{}'.format(self.resultdir,self.name))
-        }
-
-    def run(self):
-        logger = logging.getLogger(__package__)
-        if not self.output()['resultdir'].exists():
-            os.mkdir(self.output()['resultdir'].path)
-            logger.info('created result directory %s',self.output()['resultdir'].path)
-        if not self.output()['sample'].exists():
-            logger.error('sample "%s" not found',self.output()['sample'].path)
-            raise FileNotFoundError
-        if not self.sample.endswith(self.extension):
-            logger.warning('sample does not end with "%s". naming will be wrong',self.extension)
-        os.mkdir(self.output()['sampleresults'].path)
-
-@inherits(Sample)
-class countReadsSample(luigi.Task):
-    def requires(self): return self.clone_parent()
-
-    def output(self):
-        return luigi.LocalTarget('{}/readcount.txt'.format(self.input()['sampleresults'].path))
+@inherits(cutadapt)
+class TrimFilterSample(luigi.Task):
+    infile = luigi.Parameter()
+    outfile = luigi.Parameter()
     
     def run(self):
-        (local['cat'][self.input()['sample'].path] | local['grep']['-c','@'] > self.output().path)()
-
-@inherits(Sample)
-class fastqcSample(luigi.Task):
-    def requires(self): return self.clone_parent()
-
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/completed_{}'.format(self.input()['sampleresults'].path,self.task_family)),
-            luigi.LocalTarget('{}/fastqc.zip'.format(self.input()['sampleresults'].path)),
-            luigi.LocalTarget('{}/overrepresented_sequences.txt'.format(self.input()['sampleresults'].path))
-            )
-    
-    def run(self):
-        import zipfile
-        local['fastqc']['-o',self.input()['sampleresults'].path,'-t','4']()
-        zf = zipfile.ZipFile(self.output()[1])
-        fh = zf.open('fastqc/fastqc_data.txt')
-        for line in fh:
-            if b'>>Overrepresented' in line: break
-        with self.output()[2].open('wb') as f:
-            f.write(line)
-            for line in fh:
-                if line == b'>>END_MODULE\n': break
-                else: f.write(line)
-        pathlib.Path(self.output()[0].path).touch()
-
-#BDC tools possibly to be integrated
-#@inherits(Sample)
-#class cutadaptSample
-#cutadapt -e 0.1 -a GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC
-# CLBGA_TBX2_all.fastq | gzip > CLBGA_TBX2_all_clean.fastq.gz
+        stdout = local['cutadapt'](
+            '--cores', config.threads,
+            '-a', self.adapter,
+            '-e', self.errorRate,
+            '-o', self.outfile,
+            self.infile
+        )
+        if stdout: logger(stdout)
 
 #subsampleTask => subsampling naar 30 miljoen indien meer
 
