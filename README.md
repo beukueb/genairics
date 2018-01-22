@@ -151,7 +151,7 @@ aliases in `.git/config`
 	updateversion = !sed -i -e 's/version = ".*"/version = "0.1.'$(git updaterepoversion)'"/' setup.py && git commitversion
 	commitversion = !git commit -am"subversion=$(git repoversion)"
 	tagversion = !git tag -a v0.1.$(git repoversion) -m 'genairics version 0.1.'$(git repoversion) && git push origin v0.1.$(git repoversion)
-	updatemaster = !git updateversion && git checkout master && git merge dev && git tagversion && git push public master && git checkout dev
+	updatemaster = !git updateversion && git checkout master && git merge dev && git tagversion && git push origin master && git checkout dev
 
 ### Testing
 
@@ -164,7 +164,7 @@ included for any pipelines referenced in papers and pipelines used by collaborat
 
 Install brew: https://docs.brew.sh/Installation.html
 
-    brew install python3
+    brew install python3 bowtie2
     brew install homebrew/core/fastqc homebrew/science/bedtools
     pip3 install --user genairics
 

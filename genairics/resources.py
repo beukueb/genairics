@@ -127,6 +127,34 @@ class RetrieveBlacklist(luigi.Task):
         stdout = local['wget'](self.availableBlacklists[(self.genome, self.release)], '-O', self.output().path)
         logresources.info(stdout)
 
+@requires(RetrieveGenome)
+class Bowtie2Index(luigi.Task):
+    """
+    Index that can be used by bowtie2 aligner for ChIPseq, ATACseq, variant calling
+    """
+    def output(self):
+        return (
+            luigi.LocalTarget(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index'.format(
+                    species=self.genome,release=self.release))
+            ),
+            luigi.LocalTarget(
+                os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index/build_completed'.format(
+                    species=self.genome,release=self.release))
+            )
+        )
+    
+    def run(self):
+        genomeDir = self.input().path
+        os.mkdir(self.output()[0].path)
+        stdout = local['bowtie2-build'](
+            '--threads', config.threads,
+            ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
+            os.path.join(self.output()[0].path, self.genome)
+        )
+        logresources.info(stdout)
+        pathlib.Path(self.output()[1].path).touch()        
+
 @inherits(RetrieveGenome)
 class STARandRSEMindex(luigi.Task):
     """

@@ -34,7 +34,10 @@ class cutadapt(luigi.Config):
 class TrimFilterSample(luigi.Task):
     infile = luigi.Parameter()
     outfile = luigi.Parameter()
-    
+
+    def output(self):
+        return luigi.LocalTarget(self.outfile)
+        
     def run(self):
         stdout = local['cutadapt'](
             '--cores', config.threads,
@@ -47,8 +50,13 @@ class TrimFilterSample(luigi.Task):
 
 #subsampleTask => subsampling naar 30 miljoen indien meer
 
-#class mapSample
-#bowtie2 lopen en output doorspelen naar samtools, filer mapQ #groter dan 4
+@requires(TrimFilterSample)
+class MapSample(luigi.Task):
+    pass
+# bamstats
+# samtools idxstats Filtered.sortedByCoord.minMQ4.bam => per chromosome read stats
+
+#bowtie2 lopen en output doorspelen naar samtools, filter mapQ #groter dan 4
 #input SAM, output BAM, include header
 #bowtie2 -p 4 -x /Shared/references/Hsapiens/hg19/hg19full/bowtie2_index/hg19full -U $list_R1 | samtools view -q 4 -Sbh - > ${PBS_ARRAYID}.bam
 #bowtie2 -p 4 -x /Shared/references/hg38/hg38full/bowtie2_index/hg38full -U $list_R1 | samtools view -q 4 -Sbh - > ${PBS_ARRAYID}_hg38.bam
