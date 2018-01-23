@@ -34,6 +34,7 @@ if [ ! $(command -v bowtie2) ]; then
     # not using tbb lib => not a developer friendly library; no ./configure, prefix option, or make install
     make NO_TBB=1
     ln -s $GAX_REPOS/bowtie2/bowtie2 $GAX_PREFIX/bin/bowtie2
+    ln -s $GAX_REPOS/bowtie2/bowtie2-build $GAX_PREFIX/bin/bowtie2-build
 fi
 
 ## STAR
@@ -84,3 +85,12 @@ fi
 virtualenv --python=python3 $GAX_ENVS/deeptools_env
 PYTHONPATH= $GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
 ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
+
+## homer
+cd $GAX_REPOS
+mkdir homer && cd homer
+wget http://homer.ucsd.edu/homer/configureHomer.pl
+perl configureHomer.pl -install homer
+ln -s $GAX_REPOS/homer/bin/makeTagDirectory $GAX_PREFIX/bin/makeTagDirectory
+ln -s $GAX_REPOS/homer/bin/findPeaks $GAX_PREFIX/bin/findPeaks
+ln -s $GAX_REPOS/homer/bin/pos2bed.pl $GAX_PREFIX/bin/pos2bed.pl

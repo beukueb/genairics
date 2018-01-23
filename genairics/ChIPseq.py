@@ -54,7 +54,7 @@ class TrimFilterSample(luigi.Task):
             '-o', self.output().path,
             self.infile
         )
-        if stdout: logger(stdout)
+        if stdout: logger.info(stdout)
 
 #subsampleTask => subsampling naar 30 miljoen indien meer
 
@@ -77,7 +77,7 @@ class Bowtie2MapSample(luigi.Task):
             '-x', os.path.join(self.input()['index'][0].path,self.genome),
             '-U', self.input()['sample'].path #-U -> unpaired, TODO to start using paired will be with -1 and -2
         ] | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
-        if stdout: logger(stdout)
+        if stdout: logger.info(stdout)
 
 @requires(Bowtie2MapSample)
 class SamProcessSample(luigi.Task):
@@ -108,7 +108,7 @@ class SamProcessSample(luigi.Task):
         stdout += (local['samtools']['idxstats', self.output()[0].path] > self.output()[3].path)()
 
         # log
-        if stdout: logger(stdout)
+        if stdout: logger.info(stdout)
 
 @requires(SamProcessSample)
 class MakeSampleGenomeBrowserTrack(luigi.Task):
@@ -164,18 +164,84 @@ class processChIPseqSamples(luigi.Task):
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
-        
-class PeakCallingChIPsamples(luigi.Task):
-    #macs2 callpeak -t ../../NSQ_Run335/sam_2/CLBGA_TBX2_all_clean_sorted_MAPQ4.bam -c ../../NSQ_Run335/sam_1/CLBGA_INPUT_all_clean_sorted_MAPQ4.bam --outdir TBX2_vs_input_G_CLBGA_macs2_hg19_mapq4/ -n diff_peaks_TBX2_G_CLBGA -q 0.05 -g hs --bdg
-    #Rscript –vanilla diff_peaks_SOX11_D_NGP.r
-    #HOMER
-    #makeTagDirectory CLBGA_TBX2_Run335/ ../../NSQ_Run335/sam_2/CLBGA_TBX2_G_all_clean_sorted_MAPQ4.bam
-    #findPeaks IMR32_TBX2/ -style factor -o TBX2_vs_Input_1_IMR32_homer/TBX2_vs_Input_IMR32 -i IMR32_INPUT/
-    #pos2bed.pl TBX2_vs_Input_IMR32 > TBX2_vs_Input_IMR32_AC.bed
-    pass
 
-class ClusterBamFiles(luigi.Task):
+@requires(processChIPseqSamples)
+class PeakCallingChIPsamples(luigi.Task):
+    """
+    performs the peak calling with macs2
+    tries to match every ChIPseq sample with an input sample,
+    if not working as expected you will have to change the filenames
+
+    an input filename needs to contain 'input' or whatever you set as inputFileMarker
+    a matching sample file, needs to contain everything of the input filename, before
+    the 'input'/inputFileMarker section
+
+    e.g. inputfile => IMR32_input.fq.gz
+    e.g. matching file => IMR32_H3K27ac.fq.gz, as it also contains 'IMR32_'
+    """
+    inputFileMarker = luigi.Parameter(
+        default='input',
+        description='should be in filename of every input sample'
+    )
+    
+    def run(self):
+        inputfiles = {i for i in glob.glob(os.path.join(self.input()[0].path,'*{}*'.format(self.inputFileMarker)))}
+        inputmatchmap = {os.path.basename(i).split(self.inputFileMarker)[0]:i for i in inputfiles}
+        if len(inputfiles) != len(inputmatchmap):
+            logger.error('some inputfiles have non unique prefix before input marker "%s" (%s)',
+                         self.inputFileMarker,inputfiles)
+            raise Exception()
+        for sample in glob.glob(os.path.join(self.input()[0].path,'*')):
+            if sample not in inputfiles:
+                foundMarker = False
+                for marker in inputmatchmap:
+                    if os.basename(sample).startswith(marker):
+                        foundMarker = marker
+                        break
+                if not foundMarker:
+                    logger.warning('no matching input file found for %s',os.path.basename(sample))
+                else:
+                    #macs2
+                    stdout = local['macs2'](
+                        'callpeak', '-t', os.path.join(sample,'alignment_sorted.bam'),
+                        '-c', os.path.join(inputmatchmap[foundMarker],'alignment_sorted.bam'),
+                        '--outdir', sample, '-n', 'diff_peaks', '-q', 0.05, '-g', 'hs', '--bdg'
+                    )
+                    if stdout: logger.info(stdout)
+
+                    # homer
+                    stdout = local['makeTagDirectory'](
+                        os.path.join(sample,'homer_tags'),
+                        os.path.join(sample,'alignment_sorted.bam')
+                    )
+                    stdout = local['makeTagDirectory'](
+                        #TODO good place in the input align dir so does not compute twice in case of reuse
+                        os.path.join(sample,'homer_tags_input'),
+                        os.path.join(inputmatchmap[foundMarker],'alignment_sorted.bam')
+                    )
+                    stdout += local['findPeaks'](
+                        os.path.join(sample,'homer_tags'),
+                        '-style', 'factor',
+                        '-o', os.path.join(sample,'homer_peaks_found')
+                        '-i', os.path.join(sample,'homer_tags_input')
+                    )
+                    stdout += (local['pos2bed.pl'][os.path.join(sample,'homer_peaks_found')]
+                               > os.path.join(sample,'homer_peaks.bed'))()
+                    if stdout: logger.info(stdout)
+
+
+#class ClusterBamFiles(luigi.Task):
     #DeepTools for clustering of bam files
     #multiBamSummary bins --bamfiles sam_1/CLBGA_INPUT_F_sorted.bam sam_2/CLBGA_TBX2_F_sorted.bam sam_6/SKNAS_INPUT_B_sorted.bam sam_7/SKNAS_TBX2_B_sorted.bam sam_8/SKNAS_H3K27ac_B_sorted.bam -out multiBamSummary_bam_Run296.npz --labels CLBGA_INPUT CLBGA_TBX2 SKNAS_INPUT SKNAS_TBX2 SKNAS_H3K27ac
     #plotCorrelation --corData multiBamSummary_bam_Run296.npz --plotFile correlation_peaks.pdf --outFileCorMatrix correlation_peaks_matrix.txt --whatToPlot heatmap --corMethod pearson --plotNumbers --removeOutliers
-    pass
+
+@inherits(BaseSpaceSource)
+@inherits(PeakCallingChIPsamples)
+class ChIPseq(luigi.WrapperTask):
+    def requires(self):
+        yield self.clone(setupProject)
+        yield self.clone(BaseSpaceSource)
+        yield self.clone(mergeFASTQs)
+        yield self.clone(qualityCheck)
+        yield self.clone(processChIPseqSamples)
+        yield self.clone(PeakCallingChIPsamples)

@@ -13,10 +13,12 @@ def prepareParser():
     from genairics import typeMapping
     from genairics.jobs import QueuJob
     from genairics.RNAseq import RNAseq
+    from genairics.ChIPseq import ChIPseq
     from genairics.ATACseq import ATACseq
 
     pipelines = OrderedDict((
         ('RNAseq',RNAseq),
+        ('ChIPseq',ChIPseq),
         ('ATACseq',ATACseq)
     ))
 
