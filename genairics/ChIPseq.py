@@ -222,7 +222,7 @@ class PeakCallingChIPsamples(luigi.Task):
                     stdout += local['findPeaks'](
                         os.path.join(sample,'homer_tags'),
                         '-style', 'factor',
-                        '-o', os.path.join(sample,'homer_peaks_found')
+                        '-o', os.path.join(sample,'homer_peaks_found'),
                         '-i', os.path.join(sample,'homer_tags_input')
                     )
                     stdout += (local['pos2bed.pl'][os.path.join(sample,'homer_peaks_found')]
