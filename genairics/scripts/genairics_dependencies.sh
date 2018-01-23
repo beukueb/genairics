@@ -94,3 +94,10 @@ perl configureHomer.pl -install homer
 ln -s $GAX_REPOS/homer/bin/makeTagDirectory $GAX_PREFIX/bin/makeTagDirectory
 ln -s $GAX_REPOS/homer/bin/findPeaks $GAX_PREFIX/bin/findPeaks
 ln -s $GAX_REPOS/homer/bin/pos2bed.pl $GAX_PREFIX/bin/pos2bed.pl
+
+## freebayes
+cd $GAX_REPOS
+git clone --recursive git://github.com/ekg/freebayes.git && cd freebayes
+make
+ln -s $GAX_REPOS/freebayes/bin/freebayes $GAX_PREFIX/bin/freebayes
+ln -s $GAX_REPOS/freebayes/bin/bamleftalign $GAX_PREFIX/bin/bamleftalign

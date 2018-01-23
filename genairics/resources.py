@@ -72,7 +72,7 @@ class RetrieveGenome(luigi.Task):
                                  description=
 """ensembl release number of genome
 for homo_sapiens, use the following :
- 91 => GRCh38 aka hg38
+ 91 => GRCh38 aka hg38;
  75 => GRCh37 aka hg19
 """
     )
