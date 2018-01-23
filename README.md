@@ -101,6 +101,8 @@ https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-down
 
 ### Prepare your HPC account [for UGent collaborators]
 
+Go to https://www.ugent.be/hpc/en/access/faq/access to apply for access to the HPC.
+
 #### add to your HPC ~/.bashrc =>
 
     export GAX_RESOURCES=$VSC_DATA_VO/resources
