@@ -223,7 +223,7 @@ class processTranscriptomicSamples(luigi.Task):
             processTranscriptomicSampleTask( #OPTIONAL future implement with yield
                 infile1 = fastqfile,
                 infile2 = fastqfile.replace('_R1.','_R2.') if self.pairedEnd else '',
-                outfileDir = os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
+                outfileDir = os.path.join(self.output()[1].path,sample), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
             ).run()
         
