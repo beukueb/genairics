@@ -20,7 +20,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from genairics import logger, gscripts, setupProject, setupSequencedSample
+from genairics import logger, config, gscripts, setupProject, setupSequencedSample
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
@@ -71,7 +71,7 @@ class STARconfig(luigi.Config):
         description='STAR outSAMtype parameter (can contain more than one argument separated by 1 space)'
     )
     quantMode = luigi.Parameter(
-        default='BAM SortedByCoordinate',
+        default='TranscriptomeSAM GeneCounts',
         description='STAR quantMode parameter (can contain more than one argument separated by 1 space)'
     )    
 
@@ -172,8 +172,7 @@ class processTranscriptomicSampleTask(luigi.WrapperTask):
 
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(mergeFASTQs)
-@inherits(STARconfig)    
-@inherits(STARandRSEMindex)
+@inherits(RSEMconfig)    
 class processTranscriptomicSamples(luigi.Task):
     """
     Process transciptomic samples for RNAseq with STAR aligner
@@ -182,7 +181,6 @@ class processTranscriptomicSamples(luigi.Task):
 
     def requires(self):
         return {
-            'genome':self.clone(STARandRSEMindex),
             'fastqs':self.clone(mergeFASTQs)
         }
 
@@ -197,13 +195,16 @@ class processTranscriptomicSamples(luigi.Task):
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks
-        for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
+        for fastqfile in glob.glob(os.path.join(
+                self.datadir,self.project,
+                '*_R1.fastq.gz' if self.pairedEnd else '*.fastq.gz')
+        ):
             sample = os.path.basename(fastqfile).replace('.fastq.gz','')
             processTranscriptomicSampleTask( #OPTIONAL future implement with yield
                 infile1 = fastqfile,
-                infile2 = '',
+                infile2 = fastqfile.replace('_R1.','_R2.') if self.pairedEnd else '',
                 outfileDir = os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
-                **{k:self.param_kwargs[k] for k in STARconfig.get_param_names()}
+                **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
             ).run()
         
         # Check point
