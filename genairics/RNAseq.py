@@ -118,7 +118,7 @@ class STARsample(luigi.Task):
                 species=self.genome,release=self.release),
             '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', os.path.join(self.outfileDir,'/'),
+	    '--outFileNamePrefix', os.path.join(self.input()[0].path,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
@@ -151,7 +151,10 @@ class RSEMconfig(luigi.Config):
 @inherits(STARsample)
 class RSEMsample(luigi.Task):
     def requires(self):
-        self.clone(STARsample)
+        return [
+            self.clone(setupSequencedSample),
+            self.clone(STARsample)
+        ]
 
     def output(self):
         return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
@@ -161,10 +164,10 @@ class RSEMsample(luigi.Task):
             '-p', config.threads, '--alignments',
             *(('--paired-end',) if self.infile2 else ()),
             '--forward-prob', self.forwardprob,
-            os.path.join(self.outfileDir,'Aligned.toTranscriptome.out.bam'),
+            os.path.join(self.input()[0],'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
                 species=self.genome,release=self.release),
-            os.path.join(self.outfileDir,'/')
+            os.path.join(self.input()[0].path,'./')
         )
 
         # Check point
