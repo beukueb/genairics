@@ -155,7 +155,7 @@ class setupSequencedSample(luigi.Task):
     outfileDir = luigi.Parameter(description = 'sample output dir')
 
     def output(self):
-        return luigi.LocalTarget(outfileDir)
+        return luigi.LocalTarget(self.outfileDir)
         
     def run(self):
         if not self.output().exists(): os.mkdir(self.output().path)

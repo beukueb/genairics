@@ -29,8 +29,6 @@ setup(name = package,
           'genairics': [
               'scripts/genairics_dependencies.sh',
               'scripts/buildRSEMindex.sh',
-              'scripts/RSEMcounts.sh',
-              'scripts/STARaligning.sh',
 	      'scripts/qualitycheck.sh',
               'scripts/simpleDEvoom.R',
               'templates/index.html',
