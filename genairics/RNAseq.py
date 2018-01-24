@@ -118,7 +118,7 @@ class STARsample(luigi.Task):
                 species=self.genome,release=self.release),
             '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', self.outfileDir,
+	    '--outFileNamePrefix', os.path.join(self.outfileDir,'/'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
@@ -132,6 +132,15 @@ class STARsample(luigi.Task):
 class RSEMconfig(luigi.Config):
     """
     Reference: http://deweylab.biostat.wisc.edu/rsem/README.html
+    http://deweylab.biostat.wisc.edu/rsem/rsem-calculate-expression.html
+
+    Important documentation:
+    --forward-prob <double> Probability of generating a read from the
+    forward strand of a transcript. Set to 1 for a strand-specific
+    protocol where all (upstream) reads are derived from the forward
+    strand, 0 for a strand-specific protocol where all (upstream) read
+    are derived from the reverse strand, or 0.5 for a non-strand-specific
+    protocol.
     """
     forwardprob = luigi.FloatParameter(
         default=0.5,
@@ -148,11 +157,14 @@ class RSEMsample(luigi.Task):
         return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
 
     def run(self):
-        local[gscripts % 'RSEMcounts.sh'](
-            self.project, self.datadir,
+        local['rsem-calculate-expression'](
+            '-p', config.threads, '--alignments',
+            *(('--paired-end',) if self.infile2 else ()),
+            '--forward-prob', self.forwardprob,
+            os.path.join(self.outfileDir,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
                 species=self.genome,release=self.release),
-            self.forwardprob, self.pairedEnd
+            os.path.join(self.outfileDir,'/')
         )
 
         # Check point
