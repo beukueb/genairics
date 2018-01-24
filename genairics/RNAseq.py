@@ -160,16 +160,17 @@ class RSEMsample(luigi.Task):
         return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
 
     def run(self):
-        local['rsem-calculate-expression'](
+        stdout = local['rsem-calculate-expression'](
             '-p', config.threads, '--alignments',
             *(('--paired-end',) if self.infile2 else ()),
             '--forward-prob', self.forwardprob,
             os.path.join(self.input()[0].path,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
                 species=self.genome,release=self.release),
-            os.path.join(self.input()[0].path,'./')
+            os.path.join(self.input()[0].path,os.path.basename(self.outfileDir))
         )
-
+        if stdout: logger.info('%s output:\n%s',self.task_family,stdout)
+        
         # Check point
         pathlib.Path(self.output().path).touch()
 
