@@ -25,8 +25,8 @@ class mergeFASTQs(luigi.Task):
         
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/plumbing/{}.log'.format(self.datadir,self.project,self.task_family))
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/plumbing/{}.log'.format(self.resultsdir,self.project,self.task_family))
         )
 
     def run(self):
