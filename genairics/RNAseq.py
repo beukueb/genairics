@@ -171,7 +171,7 @@ class RSEMsample(luigi.Task):
         )
 
         # Check point
-        pathlib.Path(self.output()[0].path).touch()
+        pathlib.Path(self.output().path).touch()
 
 # the sample pipeline can inherit and clone the sample subtasks directly
 @inherits(RSEMsample)
@@ -187,7 +187,7 @@ class processTranscriptomicSampleTask(luigi.Task):
         self.clone(setupSequencedSample).run()
         self.clone(STARsample).run()
         self.clone(RSEMsample).run()
-        pathlib.Path(self.output()[0].path).touch()
+        pathlib.Path(self.output().path).touch()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(mergeFASTQs)
