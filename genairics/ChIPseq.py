@@ -123,7 +123,7 @@ class MakeSampleGenomeBrowserTrack(luigi.Task):
 
 # the sample pipeline can inherit and clone the subtasks directly
 @inherits(MakeSampleGenomeBrowserTrack)
-class processChIPseqSampleTask(luigi.WrapperTask):
+class processGenomicSampleTask(luigi.WrapperTask):
     def run(self):
         self.clone(TrimFilterSample).run()
         self.clone(Bowtie2MapSample).run()
@@ -134,9 +134,9 @@ class processChIPseqSampleTask(luigi.WrapperTask):
 @inherits(mergeFASTQs)
 @inherits(cutadaptConfig)    
 @inherits(Bowtie2Index)
-class processChIPseqSamples(luigi.Task):
+class processGenomicSamples(luigi.Task):
     """
-    Process ChIPseq samples
+    Process genomic samples (can be used for ChIP, ATAC, variant calling)
     """
     def requires(self):
         return {
@@ -156,7 +156,7 @@ class processChIPseqSamples(luigi.Task):
         # Run the sample subtasks
         for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
             sample = os.path.basename(fastqfile).replace('.fastq.gz','')
-            processChIPseqSampleTask( #OPTIONAL future implement with yield
+            processGenomicSampleTask( #OPTIONAL future implement with yield
                 infile = fastqfile,
                 outfileDir = os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in cutadaptConfig.get_param_names()}
@@ -165,7 +165,7 @@ class processChIPseqSamples(luigi.Task):
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
-@requires(processChIPseqSamples)
+@requires(processGenomicSamples)
 class PeakCallingChIPsamples(luigi.Task):
     """
     performs the peak calling with macs2
@@ -243,5 +243,5 @@ class ChIPseq(luigi.WrapperTask):
         yield self.clone(BaseSpaceSource)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
-        yield self.clone(processChIPseqSamples)
+        yield self.clone(processGenomicSamples)
         yield self.clone(PeakCallingChIPsamples)

@@ -18,7 +18,7 @@ from genairics import config, logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
 from genairics.resources import resourcedir, RetrieveGenome, Bowtie2Index, RetrieveBlacklist
 from genairics.RNAseq import qualityCheck
-from genairics.ChIPseq import processChIPseqSamples
+from genairics.ChIPseq import processGenomicSamples
 
 @requires(processChIPseqSamples)
 class VariantCallingSamples(luigi.Task):
@@ -38,6 +38,6 @@ class ChIPseq(luigi.WrapperTask):
         yield self.clone(BaseSpaceSource)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
-        yield self.clone(processChIPseqSamples)
+        yield self.clone(processGenomicSamples)
         yield self.clone(VariantCallingSamples)
 

@@ -143,6 +143,23 @@ class setupLogging(luigi.Task):
         )
         logger.addHandler(logfile)
 
+class setupSequencedSample(luigi.Task):
+    """
+    sets up the output directory for a specified sequenced sample
+    can be either single-end or paired end
+
+    this is ended as the starting point of pipelines that process 1 sample
+    """
+    infile1 = luigi.Parameter(description = 'fastqfile 1')
+    infile2 = luigi.Parameter(default = '', description = 'fastqfile 2 in case of paired-end sequencing')
+    outfileDir = luigi.Parameter(description = 'sample output dir')
+
+    def output(self):
+        return luigi.LocalTarget(outfileDir)
+        
+    def run(self):
+        if not self.output().exists(): os.mkdir(self.output().path)
+
 # genairic (non-luigi) directed workflow runs
 def runTaskAndDependencies(task):
     #TODO -> recursive function for running workflow, check luigi alternative first

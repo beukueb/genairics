@@ -21,6 +21,16 @@ mkdir -p $GAX_ENVS
 # https://github.com/kislyuk/argcomplete/
 activate-global-python-argcomplete
 
+## wrapprogram function -> takes program, and wraps module needed on hpc
+function wrapprogram {
+    wrapperscript=$GAX_PREFIX/bin/$(basename $1)
+    echo '#!/bin/env bash' > $wrapperscript
+    echo 'module purge' >> $wrapperscript
+    echo "module load $2" >> $wrapperscript
+    echo $1 '"$@"' >> $wrapperscript
+    chmod +x $wrapperscript
+}
+
 ## fastqc -> install with apt-get, brew, ...
 
 ## bowtie2
@@ -49,18 +59,20 @@ fi
 
 ## RSEM
 cd $GAX_REPOS
-git clone https://github.com/deweylab/RSEM.git
-cd RSEM
-make
-ln -s $GAX_REPOS/RSEM/rsem-prepare-reference $GAX_PREFIX/bin/rsem-prepare-reference
-ln -s $GAX_REPOS/RSEM/rsem-calculate-expression $GAX_PREFIX/bin/rsem-calculate-expression
+git clone https://github.com/deweylab/RSEM.git && cd RSEM && make
+if [[ -v VSC_HOME ]]; then
+    wrapprogram $GAX_REPOS/RSEM/rsem-prepare-reference Perl
+    wrapprogram $GAX_REPOS/RSEM/rsem-calculate-expression Perl
+else
+    ln -s $GAX_REPOS/RSEM/rsem-prepare-reference $GAX_PREFIX/bin/rsem-prepare-reference
+    ln -s $GAX_REPOS/RSEM/rsem-calculate-expression $GAX_PREFIX/bin/rsem-calculate-expression
+fi
 
 ## bedtools
 cd $GAX_REPOS
 wget https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz
 tar -zxvf bedtools-2.25.0.tar.gz
-cd bedtools2
-make
+cd bedtools2 && make
 for program in $(ls bin); do
     ln -s $GAX_REPOS/bedtools2/bin/$program $GAX_PREFIX/bin/$program
 done
@@ -97,7 +109,7 @@ ln -s $GAX_REPOS/homer/bin/pos2bed.pl $GAX_PREFIX/bin/pos2bed.pl
 
 ## freebayes
 cd $GAX_REPOS
-git clone --recursive git://github.com/ekg/freebayes.git && cd freebayes
+git clone --recursive https://github.com/ekg/freebayes.git && cd freebayes
 make
 ln -s $GAX_REPOS/freebayes/bin/freebayes $GAX_PREFIX/bin/freebayes
 ln -s $GAX_REPOS/freebayes/bin/bamleftalign $GAX_PREFIX/bin/bamleftalign

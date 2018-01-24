@@ -20,7 +20,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from genairics import logger, gscripts, setupProject
+from genairics import logger, gscripts, setupProject, setupSequencedSample
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
@@ -34,9 +34,9 @@ class qualityCheck(luigi.Task):
         
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/QCresults'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/summaries/qcsummary.csv'.format(self.datadir,self.project))
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/QCresults'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project))
         )
 
     def run(self):
@@ -55,16 +55,133 @@ class qualityCheck(luigi.Task):
             outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
         pathlib.Path(self.output()[0].path).touch()
 
-@inherits(mergeFASTQs)
+# per sample subtasks
+## STAR aligning
 @inherits(STARandRSEMindex)
-class alignTask(luigi.Task):
+class STARconfig(luigi.Config):
     """
-    Align reads to genome with STAR
+    Reference: https://github.com/alexdobin/STAR
+    """
+    readFilesCommand = luigi.Parameter(
+        default='zcat',
+        description='STAR readFilesCommand parameter'
+    )
+    outSAMtype = luigi.Parameter(
+        default='BAM SortedByCoordinate',
+        description='STAR outSAMtype parameter (can contain more than one argument separated by 1 space)'
+    )
+    quantMode = luigi.Parameter(
+        default='BAM SortedByCoordinate',
+        description='STAR quantMode parameter (can contain more than one argument separated by 1 space)'
+    )    
+
+@inherits(STARconfig)
+@inherits(setupSequencedSample)
+class STARsample(luigi.Task):
+    """
+    Task that does the STAR alignment
+
+    Currently fq's not moved first to tmp dir TODO
+    Previous implementation that did that in the bash script:
+    #Prepare workdir
+    if [ "$PBS_JOBID" ]; then
+    cd $TMPDIR
+    if [ -d fastqs ]; then
+	# if quality check ran previously on same node, fastqs will already be present
+	mkdir alignmentResults
+    else
+	mkdir {fastqs,alignmentResults}
+	cp $datadir/$project/*.fastq.gz fastqs/
+    fi
+    outdir=$TMPDIR/alignmentResults
+    else
+    cd $datadir/../results/$project/
+    mkdir alignmentResults
+    outdir=$datadir/../results/$project/alignmentResults
+    fi
+
+    at the end tmp results were moved to final destination:
+    if [ "$PBS_JOBID" ]; then
+    mv $TMPDIR/alignmentResults $datadir/../results/${project}/alignmentResults${suffix}
+    fi
+    """
+    def requires(self):
+        return self.clone(setupSequencedSample)
+
+    def output(self):
+        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+        
+    def run(self):
+        stdout = local['STAR'](
+            '--runThreadN', config.threads,
+            '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
+                species=self.genome,release=self.release),
+            '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else (,)), 
+	    '--readFilesCommand', self.readFilesCommand,
+	    '--outFileNamePrefix', self.outfileDir,
+	    '--outSAMtype', *self.outSAMtype.split(' '),
+	    '--quantMode', *self.quantMode.split(' ')
+        )
+        if stdout: logger.info('%s output:\n%s',self.task_family,stdout)
+
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
+
+## RSEM counting
+@inherits(STARconfig)
+class RSEMconfig(luigi.Config):
+    """
+    Reference: http://deweylab.biostat.wisc.edu/rsem/README.html
+    """
+    forwardprob = luigi.FloatParameter(
+        default=0.5,
+        description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]'
+    )
+    
+@inherits(RSEMconfig)
+@inherits(STARsample)
+class RSEMsample(luigi.Task):
+    def requires(self):
+        self.clone(STARsample)
+
+    def output(self):
+        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+
+    def run(self):
+        local[gscripts % 'RSEMcounts.sh'](
+            self.project, self.datadir,
+            resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
+                species=self.genome,release=self.release),
+            self.forwardprob, self.pairedEnd
+        )
+
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
+
+# the sample pipeline can inherit and clone the sample subtasks directly
+@inherits(RSEMsample)
+class processTranscriptomicSampleTask(luigi.WrapperTask):
+    """
+    This wrappers makes sure all the individuel sample tasks get run.
+    Each task should be idempotent to avoid issues.
+    """
+    def run(self):
+        self.clone(setupSequencedSample).run()
+        self.clone(STARsample).run()
+        self.clone(RSEMsample).run()
+
+# the all samples pipeline needs to inherit the sample pipeline configs
+@inherits(mergeFASTQs)
+@inherits(STARconfig)    
+@inherits(STARandRSEMindex)
+class processTranscriptomicSamples(luigi.Task):
+    """
+    Process transciptomic samples for RNAseq with STAR aligner
     """
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
     pairedEnd = luigi.BoolParameter(default=False,
-                               description='paired end sequencing reads')
-    
+                                    description='paired end sequencing reads')
+
     def requires(self):
         return {
             'genome':self.clone(STARandRSEMindex),
@@ -73,25 +190,47 @@ class alignTask(luigi.Task):
 
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/alignmentResults'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/summaries/STARcounts.csv'.format(self.datadir,self.project))
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/sampleResults'.format(self.resultsdir,self.project)),
         )
 
     def run(self):
-        stdout = local[gscripts % 'STARaligning.sh'](
-            self.project, self.datadir, self.suffix, self.genome, self.pairedEnd,
-            resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
-                species=self.genome,release=self.release)
-        )
-        logger.info('%s output:\n%s',self.task_family,stdout)
+        # Make output directory
+        if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
+
+        # Run the sample subtasks
+        for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
+            sample = os.path.basename(fastqfile).replace('.fastq.gz','')
+            processTranscriptomicSampleTask( #OPTIONAL future implement with yield
+                infile1 = fastqfile,
+                infile2 = '',
+                outfileDir = os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
+                **{k:self.param_kwargs[k] for k in STARconfig.get_param_names()}
+            ).run()
         
+        # Check point
+        pathlib.Path(self.output()[0].path).touch()
+        
+@requires(processTranscriptomicSamples)
+class mergeAlignResults(luigi.Task):
+    """
+    Merge the align and count results
+    """
+
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/summaries/STARcounts.csv'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/RSEMcounts.csv'.format(self.resultsdir,self.project))
+        )
+
+    def run(self):
         #Process STAR counts
         amb = []
         counts = []
         amb_annot = counts_annot = None
         samples = []
-        for dir in glob.glob(self.output()[1].path+'/*'):
+        for dir in glob.glob(os.path.join(self.input()[1].path,'*')):
             f = open(dir+'/ReadsPerGene.out.tab')
             f = f.readlines()
             amb.append([int(l.split()[1]) for l in f[:4]])
@@ -105,48 +244,22 @@ class alignTask(luigi.Task):
         # Alignment summary file
         counts_df = pd.DataFrame(counts,columns=counts_annot,index=samples).transpose()
         counts_df.to_csv(self.output()[2].path)
-        # Check point
-        pathlib.Path(self.output()[0].path).touch()
     
-@inherits(alignTask)
-class countTask(luigi.Task):
-    """
-    Recount reads with RSEM
-    """
-    forwardprob = luigi.FloatParameter(default=0.5,
-                                       description='stranded seguencing [0 for illumina stranded], or non stranded [0.5]')
-    
-    def requires(self):
-        return self.clone_parent()
-
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/countResults'.format(self.datadir,self.project)),
-            luigi.LocalTarget('{}/../results/{}/summaries/RSEMcounts.csv'.format(self.datadir,self.project))
-        )
-
-    def run(self):
-        local[gscripts % 'RSEMcounts.sh'](
-            self.project, self.datadir,
-            resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
-                species=self.genome,release=self.release),
-            self.forwardprob, self.pairedEnd
-        )
         # Process RSEM counts
         counts = {}
         samples = []
-        for gfile in glob.glob(self.output()[1].path+'/*.genes.results'):
+        for gfile in glob.glob(os.path.join(self.input()[1].path,'*/*.genes.results')):
             sdf = pd.read_table(gfile,index_col=0)
             counts[gfile[gfile.rindex('/')+1:-14]] = sdf.expected_count
 
         # Counts summary file
         counts_df = pd.DataFrame(counts)
         counts_df.to_csv(self.output()[2].path)
+        
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
-@inherits(countTask)
+@inherits(mergeAlignResults)
 class diffexpTask(luigi.Task):
     design = luigi.Parameter(default='',
                              description='model design for differential expression analysis')
@@ -156,19 +269,19 @@ class diffexpTask(luigi.Task):
     
     def output(self):
         return (
-            luigi.LocalTarget('{}/../results/{}/plumbing/completed_{}'.format(self.datadir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/../results/{}/summaries/DEexpression.csv'.format(self.datadir,self.project))
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/summaries/DEexpression.csv'.format(self.resultsdir,self.project))
         )
 
     def run(self):
         if not self.metafile:
-            samples = glob.glob('{}/../results/{}/alignmentResults/*'.format(self.datadir,self.project))
+            samples = glob.glob('{}/{}/sampleResults/*'.format(self.resultsdir,self.project))
             samples = pd.DataFrame(
                 {'bam_location':samples,
                  'alignment_dir_size':[local['du']['-sh'](s).split('\t')[0] for s in samples]},
                 index = [os.path.basename(s) for s in samples]
             )
-            metafile = '{}/../results/{}/metadata/samples.csv'.format(self.datadir,self.project)
+            metafile = '{}/{}/metadata/samples.csv'.format(self.resultsdir,self.project)
             samples.to_csv(metafile)
             msg = colors.red | '''
                 metafile needs to be provided to run DE analysis
@@ -194,6 +307,6 @@ class RNAseq(luigi.WrapperTask):
         yield self.clone(BaseSpaceSource)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
-        yield self.clone(alignTask)
-        yield self.clone(countTask)
+        yield self.clone(processTranscriptomicSamples)
+        yield self.clone(mergeAlignResults)
         if self.design: yield self.clone(diffexpTask)
