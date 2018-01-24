@@ -9,7 +9,7 @@ Full pipeline starting from BaseSpace fastq project
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local, colors
 import pandas as pd
 import logging
@@ -116,7 +116,7 @@ class STARsample(luigi.Task):
             '--runThreadN', config.threads,
             '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
                 species=self.genome,release=self.release),
-            '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else (,)), 
+            '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
 	    '--readFilesCommand', self.readFilesCommand,
 	    '--outFileNamePrefix', self.outfileDir,
 	    '--outSAMtype', *self.outSAMtype.split(' '),
