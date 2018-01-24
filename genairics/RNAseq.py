@@ -118,7 +118,7 @@ class STARsample(luigi.Task):
                 species=self.genome,release=self.release),
             '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', os.path.join(self.input()[0].path,'./'),
+	    '--outFileNamePrefix', os.path.join(self.input().path,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
@@ -164,7 +164,7 @@ class RSEMsample(luigi.Task):
             '-p', config.threads, '--alignments',
             *(('--paired-end',) if self.infile2 else ()),
             '--forward-prob', self.forwardprob,
-            os.path.join(self.input()[0],'Aligned.toTranscriptome.out.bam'),
+            os.path.join(self.input()[0].path,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
                 species=self.genome,release=self.release),
             os.path.join(self.input()[0].path,'./')
@@ -175,15 +175,19 @@ class RSEMsample(luigi.Task):
 
 # the sample pipeline can inherit and clone the sample subtasks directly
 @inherits(RSEMsample)
-class processTranscriptomicSampleTask(luigi.WrapperTask):
+class processTranscriptomicSampleTask(luigi.Task):
     """
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
+    def output(self):
+        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+    
     def run(self):
         self.clone(setupSequencedSample).run()
         self.clone(STARsample).run()
         self.clone(RSEMsample).run()
+        pathlib.Path(self.output()[0].path).touch()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(mergeFASTQs)
