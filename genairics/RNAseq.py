@@ -125,7 +125,7 @@ class STARsample(luigi.Task):
         if stdout: logger.info('%s output:\n%s',self.task_family,stdout)
 
         # Check point
-        pathlib.Path(self.output()[0].path).touch()
+        pathlib.Path(self.output().path).touch()
 
 ## RSEM counting
 @inherits(STARconfig)
