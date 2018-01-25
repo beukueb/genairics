@@ -19,36 +19,44 @@ class mergeFASTQs(luigi.Task):
         default=False,
         description='paired end sequencing reads'
     )
+    removeOriginalFQs = luigi.BoolParameter(
+        default=False,
+        description='remove the folder with the original, unmerged FASTQ files'
+    )
     
     def requires(self):
         return self.clone_parent() #or self.clone(basespaceData)
         
     def output(self):
         return (
-            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/plumbing/{}.log'.format(self.resultsdir,self.project,self.task_family))
+            luigi.LocalTarget('{}/{}/.completed_{}'.format(self.datadir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/.{}.log'.format(self.datadir,self.project,self.task_family))
         )
 
     def run(self):
-        if self.dirstructure == 'multidir':
-            outdir = '{}/{}/fastqs/'.format(self.resultsdir,self.project)
+        if self.dirstructure == 'multidir' and not self.output().exists():
+            outdir = '{}/{}'.format(self.datadir,self.project)
+            oridir = '{}/{}_original_FASTQs'.format(self.datadir,self.project)
+            os.rename(outdir,oridir)
             os.mkdir(outdir)
-            dirsFASTQs = local['ls']('{}/{}'.format(self.datadir,self.project)).split()
+            dirsFASTQs = local['ls'](oridir).split()
             for d in dirsFASTQs:
-                (local['ls'] >> (self.output()[1].path))('-lh','{}/{}/{}'.format(self.datadir,self.project,d))
+                (local['ls'] >> (self.output()[1].path))('-lh',os.path.join(oridir,d))
                 if self.pairedEnd:
-                    (local['cat'] > outdir+d+'_R1.fastq.gz')(
-                        *glob.glob('{}/{}/{}/*_R1_*.fastq.gz'.format(self.datadir,self.project,d))
+                    (local['cat'] > os.path.join(outdir,d+'_R1.fastq.gz'))(
+                        *glob.glob(os.path.join(oridir,d,'*_R1_*.fastq.gz'))
                     )
                     (local['cat'] > outdir+d+'_R2.fastq.gz')(
-                        *glob.glob('{}/{}/{}/*_R2_*.fastq.gz'.format(self.datadir,self.project,d))
+                        *glob.glob(os.path.join(oridir,d,'*_R2_*.fastq.gz'))
                     )
                 else:
                     (local['cat'] > outdir+d+'.fastq.gz')(
-                        *glob.glob('{}/{}/{}/*.fastq.gz'.format(self.datadir,self.project,d))
+                        *glob.glob(os.path.join(oridir,d,'*.fastq.gz'))
                     )
-            os.rename('{}/{}'.format(self.datadir,self.project),'{}/{}_original_FASTQs'.format(self.datadir,self.project))
-            os.symlink(outdir,'{}/{}'.format(self.datadir,self.project), target_is_directory = True)
+            if self.removeOriginalFQs:
+                import shutil
+                shutil.rmtree(oridir)
+        # complete file and log file get touched even if no execution is necessary
         pathlib.Path(self.output()[0].path).touch()
         pathlib.Path(self.output()[1].path).touch()
 
