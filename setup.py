@@ -4,7 +4,7 @@ package = "genairics"
 version = "0.1.25"
 
 setup(name = package,
-      version = version
+      version = version,
       description="GENeric AIRtight omICS pipelines",
       url='https://github.com/beukueb/genairics',
       author = 'Christophe Van Neste',
