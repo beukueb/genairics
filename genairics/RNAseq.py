@@ -109,7 +109,7 @@ class STARsample(luigi.Task):
         return self.clone(setupSequencedSample)
 
     def output(self):
-        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
         
     def run(self):
         stdout = local['STAR'](
@@ -157,7 +157,7 @@ class RSEMsample(luigi.Task):
         ]
 
     def output(self):
-        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
 
     def run(self):
         stdout = local['rsem-calculate-expression'](
@@ -182,7 +182,7 @@ class processTranscriptomicSampleTask(luigi.Task):
     Each task should be idempotent to avoid issues.
     """
     def output(self):
-        return luigi.LocalTarget('{}/completed_{}'.format(self.outfileDir,self.task_family))
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
     
     def run(self):
         self.clone(setupSequencedSample).run()
@@ -250,7 +250,7 @@ class mergeAlignResults(luigi.Task):
         amb_annot = counts_annot = None
         samples = []
         for dir in glob.glob(os.path.join(self.input()[1].path,'*')):
-            f = open(dir+'/ReadsPerGene.out.tab')
+            f = open(os.path.join(dir,'ReadsPerGene.out.tab'))
             f = f.readlines()
             amb.append([int(l.split()[1]) for l in f[:4]])
             if not amb_annot: amb_annot = [l.split()[0] for l in f[:4]]
