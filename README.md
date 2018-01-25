@@ -148,12 +148,13 @@ dev branch, merging to master and updating version with following
 aliases in `.git/config`
 
 	[alias]
-	repoversion = !echo 22
+	repoversion = !echo 25
 	updaterepoversion = !git config --local alias.repoversion '!echo '$(($(git repoversion)+1)) && git repoversion
-	updateversion = !sed -i -e 's/version = ".*"/version = "0.1.'$(git updaterepoversion)'"/' setup.py && git commitversion
+	updateversion = !sed -i -e 's/version = \".*\"/version = \"0.1.'$(git updaterepoversion)'\"/' setup.py && git commitversion
 	commitversion = !git commit -am"subversion=$(git repoversion)"
 	tagversion = !git tag -a v0.1.$(git repoversion) -m 'genairics version 0.1.'$(git repoversion) && git push origin v0.1.$(git repoversion)
 	updatemaster = !git updateversion && git checkout master && git merge dev && git tagversion && git push origin master && git checkout dev
+	pulldev = !git pull origin dev && pip3 install --user --upgrade .
 
 ### Testing
 
