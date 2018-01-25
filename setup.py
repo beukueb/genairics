@@ -1,10 +1,10 @@
 from setuptools import setup
 
 package = "genairics"
-version = 0.1.25
+version = "0.1.25"
 
 setup(name = package,
-      version = 0.1.25
+      version = version
       description="GENeric AIRtight omICS pipelines",
       url='https://github.com/beukueb/genairics',
       author = 'Christophe Van Neste',
