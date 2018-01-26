@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program at the root of the source package.
 """
 
-import luigi, os, logging
+import luigi, os, pathlib, logging
 from luigi.util import inherits
 from plumbum import local, colors
 from multiprocessing import cpu_count
@@ -136,6 +136,8 @@ class setupProject(luigi.Task):
                 copyfile(self.metafile,os.path.join(self.output()[0].path,'/metadata/'))
             os.mkdir(self.output()[1].path)
             os.mkdir(self.output()[2].path)
+            pathlib.Path(self.output()[3].path).touch()
+            
 
 @inherits(setupProject)
 class setupLogging(luigi.Task):
