@@ -124,7 +124,6 @@ class setupProject(luigi.Task):
             luigi.LocalTarget(os.path.join(self.resultsdir,self.project)),
             luigi.LocalTarget(os.path.join(self.resultsdir,self.project,'plumbing')),
             luigi.LocalTarget(os.path.join(self.resultsdir,self.project,'summaries')),
-            luigi.LocalTarget(os.path.join(self.resultsdir,self.project,'plumbing/pipeline.log'))
         )
 
     def run(self):
@@ -136,30 +135,28 @@ class setupProject(luigi.Task):
                 copyfile(self.metafile,os.path.join(self.output()[0].path,'/metadata/'))
             os.mkdir(self.output()[1].path)
             os.mkdir(self.output()[2].path)
-            pathlib.Path(self.output()[3].path).touch()
-            
 
-@inherits(setupProject)
+@requires(setupProject)
 class setupLogging(luigi.Task):
     """
     Registers the logging file
     Always needs to run, to enable logging to the file
     """
-    def requires(self):
-        return self.clone_parent()
-
+    def output(self):
+        return luigi.LocalTarget(os.path.join(selfinput()[1].path,'pipeline.log'))
+    
     def run(self):
-        #TODO put in a decorator for run functions, or rely on true luigi running
         if not self.requires().complete(): self.requires().run()
         
         logger = logging.getLogger(__package__)
-        logfile = logging.FileHandler(self.input()[3].path)
+        logfile = logging.FileHandler(self.output().path)
         logfile.setLevel(logging.INFO)
         logfile.setFormatter(
             logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
         )
         logger.addHandler(logfile)
-
+        if not self.complete(): pathlib.Path(self.output().path).touch()
+            
 class setupSequencedSample(luigi.Task):
     """
     sets up the output directory for a specified sequenced sample
