@@ -128,13 +128,14 @@ class setupProject(luigi.Task):
         )
 
     def run(self):
-        os.mkdir(self.output()[0].path)
-        os.mkdir(os.path.join(self.output()[0].path,'metadata'))
-        if self.metafile:
-            from shutil import copyfile
-            copyfile(self.metafile,os.path.join(self.output()[0].path,'/metadata/'))
-        os.mkdir(self.output()[1].path)
-        os.mkdir(self.output()[2].path)
+        if not self.complete():
+            os.mkdir(self.output()[0].path)
+            os.mkdir(os.path.join(self.output()[0].path,'metadata'))
+            if self.metafile:
+                from shutil import copyfile
+                copyfile(self.metafile,os.path.join(self.output()[0].path,'/metadata/'))
+            os.mkdir(self.output()[1].path)
+            os.mkdir(self.output()[2].path)
 
 @inherits(setupProject)
 class setupLogging(luigi.Task):
