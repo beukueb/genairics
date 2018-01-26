@@ -19,7 +19,7 @@ along with this program at the root of the source package.
 """
 
 import luigi, os, pathlib, logging
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local, colors
 from multiprocessing import cpu_count
 
