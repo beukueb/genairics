@@ -199,4 +199,10 @@ def runTaskAndDependencies(task):
 def runWorkflow(pipeline):
     pipeline.clone(setupLogging).run()
     logger.info(pipeline)
-    runTaskAndDependencies(pipeline)
+    # different options to start pipeline, only 1 not commented out
+    scheduler = luigi.scheduler.Scheduler()
+    worker = luigi.worker.Worker(scheduler = scheduler, worker_processes = 1)
+    worker.add(pipeline)
+    worker.run()
+    #luigi.build([pipeline]) #can start any list of tasks and also starts scheduler, worker
+    #runTaskAndDependencies(pipeline) # genairics own dependency checking
