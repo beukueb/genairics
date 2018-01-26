@@ -143,7 +143,7 @@ class setupLogging(luigi.Task):
     Always needs to run, to enable logging to the file
     """
     def output(self):
-        return luigi.LocalTarget(os.path.join(selfinput()[1].path,'pipeline.log'))
+        return luigi.LocalTarget(os.path.join(self.input()[1].path,'pipeline.log'))
     
     def run(self):
         if not self.requires().complete(): self.requires().run()
