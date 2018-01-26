@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import luigi, logging, os, sys, itertools, glob, pathlib
-from luigi.util import inherits
+from luigi.util import inherits, requires
 from plumbum import local
 from genairics import config, setupProject
 from genairics.resources import RetrieveGenome
 
-@inherits(setupProject)
+@requires(setupProject)
 class mergeFASTQs(luigi.Task):
     """
     Merge fastqs if one sample contains more than one fastq
@@ -24,9 +24,6 @@ class mergeFASTQs(luigi.Task):
         description='remove the folder with the original, unmerged FASTQ files'
     )
     
-    def requires(self):
-        return self.clone_parent() #or self.clone(basespaceData)
-        
     def output(self):
         return (
             luigi.LocalTarget('{}/{}/.completed_{}'.format(self.datadir,self.project,self.task_family)),
@@ -34,7 +31,7 @@ class mergeFASTQs(luigi.Task):
         )
 
     def run(self):
-        if self.dirstructure == 'multidir' and not self.output().exists():
+        if self.dirstructure == 'multidir' and not self.output()[0].exists():
             outdir = '{}/{}'.format(self.datadir,self.project)
             oridir = '{}/{}_original_FASTQs'.format(self.datadir,self.project)
             os.rename(outdir,oridir)
@@ -46,19 +43,84 @@ class mergeFASTQs(luigi.Task):
                     (local['cat'] > os.path.join(outdir,d+'_R1.fastq.gz'))(
                         *glob.glob(os.path.join(oridir,d,'*_R1_*.fastq.gz'))
                     )
-                    (local['cat'] > outdir+d+'_R2.fastq.gz')(
+                    (local['cat'] > os.path.join(outdir,d+'_R2.fastq.gz'))(
                         *glob.glob(os.path.join(oridir,d,'*_R2_*.fastq.gz'))
                     )
                 else:
-                    (local['cat'] > outdir+d+'.fastq.gz')(
+                    (local['cat'] > os.path.join(outdir,d+'.fastq.gz'))(
                         *glob.glob(os.path.join(oridir,d,'*.fastq.gz'))
                     )
             if self.removeOriginalFQs:
                 import shutil
                 shutil.rmtree(oridir)
+                logger.warning('%s removed',oridir)
         # complete file and log file get touched even if no execution is necessary
         pathlib.Path(self.output()[0].path).touch()
         pathlib.Path(self.output()[1].path).touch()
+
+def groupfilelines(iterable, n=4, fillvalue=None):
+    """
+    read n files per iteration
+    default n = 4 => read 1 fastq entry at a time
+
+    >>> for lines in groupfilelines(f):
+    ...     break
+    """
+    from itertools import zip_longest
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
+
+@requires(mergeFASTQs)
+class SubsampleProject(luigi.Task):
+    """
+    Takes a project datadir and subsamples the FASTQs to either an exact number of
+    reads or a percentage of the original files
+    """
+    amount = luigi.FloatParameter(description='amount of reads to subsample')
+    percentage = luigi.BoolParameter(
+        False,
+        description='amount of reads will be treated as the approximate percentage of reads of the sample'
+    )
+    seed = luigi.IntParameter(0,'seed to use for random selection')
+    subsuffix = luigi.Parameter(
+        default = '_subsampled',
+        description = 'suffix to use for new subsampled data directory'
+    )
+    
+    def output(self):
+        return luigi.LocalTarget('{}/{}_subsampled'.format(self.datadir,self.project))
+
+    def run(self):
+        import gzip, random
+        random.seed(self.seed)
+        oridir = '{}/{}'.format(self.datadir,self.project)
+        subdir = '{}/{}{}'.format(self.datadir,self.project,self.subsuffix)
+        outdir = '{}_subsampling'.format(subdir)
+        os.mkdir(outdir)
+        for fqfile in glob.glob(
+                os.path.join(
+                    oridir,
+                    '*._R1.fastq.gz' if self.pairedEnd else '*.fastq.gz'
+                )):
+            # Determine which reads to subsample
+            reads = 0
+            with gzip.open(fqfile) as gf1:
+                for lines in groupfilelines(gf1): reads += 1
+                gf1.seek(0)
+                if self.percentage: self.amount = int(reads*self.amount)
+                selectedReads = random.sample(range(reads),self.amount)
+                with gzip.open(os.path.join(outdir,os.path.basename(fqfile)), 'wb') as gfout:
+                    for i,lines in enumerate(groupfilelines(gf1)):
+                        if i in selectedReads:
+                            gfout.writelines(lines)
+            if self.pairedEnd:
+                fqfile2 = fqfile.replace('_R1.fastq.gz','_R2.fastq.gz')
+                with gzip.open(fqfile2) as gf2, gzip.open(os.path.join(outdir,os.path.basename(fqfile2)), 'wb') as gfout:
+                    for i,lines in enumerate(groupfilelines(gf2)):
+                        if i in selectedReads:
+                            gfout.writelines(lines)
+        # renaming temporary outdir to final subdir
+        os.rename(outdir,subdir)
 
 @inherits(setupProject)
 class BaseSpaceSource(luigi.Task):

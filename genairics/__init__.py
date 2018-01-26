@@ -21,6 +21,7 @@ along with this program at the root of the source package.
 import luigi, os, logging
 from luigi.util import inherits
 from plumbum import local, colors
+from multiprocessing import cpu_count
 
 ## genairics configuration (integrated with luigi config)
 class genairics(luigi.Config):
@@ -41,10 +42,23 @@ class genairics(luigi.Config):
         default = os.path.expanduser('~/.BASESPACE_API'),
         description = 'file containing BaseSpace API token'
     )
-    nodes = luigi.IntParameter(default=1,description='nodes to use to execute pipeline')
-    threads = luigi.IntParameter(default=16,description='processors per node to request')
-    ui = luigi.ChoiceParameter(default='wui',choices=['wui','gui','cli'],description='user interface mode')
-    browser = luigi.Parameter('firefox', description = 'browser to use for wui')
+    nodes = luigi.IntParameter(
+        default = os.environ.get('PBS_NUM_NODES',1),
+        description = 'nodes to use to execute pipeline'
+    )
+    threads = luigi.IntParameter(
+        default = cpu_count(),
+        description = 'processors per node to request'
+    )
+    ui = luigi.ChoiceParameter(
+        default = 'wui',
+        choices = ['wui','gui','cli'],
+        description = 'user interface mode'
+    )
+    browser = luigi.Parameter(
+        default = 'firefox',
+        description = 'browser to use for wui'
+    )
 
 config = genairics()
 
