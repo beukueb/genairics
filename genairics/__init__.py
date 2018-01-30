@@ -203,6 +203,6 @@ def runWorkflow(pipeline):
     scheduler = luigi.scheduler.Scheduler()
     worker = luigi.worker.Worker(scheduler = scheduler, worker_processes = 1)
     worker.add(pipeline)
-    worker.run()
+    worker.run() # this could also be started in a thread => thread.start_new_thread(w.run, ())
     #luigi.build([pipeline]) #can start any list of tasks and also starts scheduler, worker
     #runTaskAndDependencies(pipeline) # genairics own dependency checking

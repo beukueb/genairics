@@ -278,13 +278,62 @@ class mergeAlignResults(luigi.Task):
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
-@inherits(mergeAlignResults)
+@requires(mergeAlignResults)
+class PCAplotCounts(luigi.Task):
+    sampleAnnotator = luigi.Parameter(
+        default = '_',
+        description = 'the string that separates annotation parts in the sample filename'
+    )
+    annotatorRelevant = luigi.IntParameter(
+        default = 1,
+        description = 'the number of relevant annotation parts in the sample filename'
+    )
+    countsFilter = luigi.FloatParameter(
+        default = 1,
+        description = 'the minimum average number (over all samples) of reads required for a gene for further analysis'
+    )
+    
+    def output(self):
+        return luigi.LocalTarget('{}/{}/summaries/PCAplot.svg'.format(self.resultsdir,self.project))
+
+    def run(self):
+        import matplotlib
+        matplotlib.use('svg')
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import numpy as np
+        from sklearn import preprocessing
+        from sklearn.decomposition import PCA as sklearnPCA
+        counts = pd.read_csv(self.input()[2].path, index_col = 'gene_id')
+        # Filter counts
+        beforeFiltering = len(counts)
+        counts = counts[counts.sum(axis=1) >= self.countsFilter * len(counts.columns)]
+        logger.info('Remaining %s of %s after filtering',beforeFiltering,len(counts))
+        # Normalize
+        quantile_transformer = preprocessing.QuantileTransformer(
+            output_distribution = 'normal',
+            n_quantiles = 100,
+            random_state = 0
+        )
+        X_norm = quantile_transformer.fit_transform(counts.T.as_matrix())
+        #X_scaled = preprocessing.scale(counts.as_matrix())
+        #X_norm = (X - X.min())/(X.max() - X.min())
+        # Transform counts
+        X_tran = np.log(X_norm + abs(X_norm.min()) + 1)
+        pca = sklearnPCA(n_components=2)
+        transformed = pd.DataFrame(pca.fit_transform(X_tran),index=counts.columns,columns=['PC1','PC2'])
+        transformed['annotation'] = transformed.T.apply(
+            lambda x: ' '.join(x.name.split(self.sampleAnnotator)[:self.annotatorRelevant])
+        )
+        #pcaComponents = pd.DataFrame(pca.components_,columns=counts.index).T
+        # Make figure
+        fig = sns.lmplot('PC1', 'PC2', data = transformed, hue = 'annotation', fit_reg = False, scatter_kws={'s':50})
+        fig.savefig(self.output().path)
+        
+@requires(mergeAlignResults)
 class diffexpTask(luigi.Task):
     design = luigi.Parameter(default='',
                              description='model design for differential expression analysis')
-    
-    def requires(self):
-        return self.clone_parent()
     
     def output(self):
         return (
@@ -319,6 +368,7 @@ class diffexpTask(luigi.Task):
         pathlib.Path(self.output()[0].path).touch()
 
 @inherits(BaseSpaceSource)
+@inherits(PCAplotCounts)
 @inherits(diffexpTask)
 class RNAseq(luigi.WrapperTask):
     def requires(self):
@@ -328,4 +378,5 @@ class RNAseq(luigi.WrapperTask):
         yield self.clone(qualityCheck)
         yield self.clone(processTranscriptomicSamples)
         yield self.clone(mergeAlignResults)
+        yield self.clone(PCAplotCounts)
         if self.design: yield self.clone(diffexpTask)
