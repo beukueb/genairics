@@ -80,7 +80,8 @@ def prepareParser():
     # Console option
     def startConsole():
         import IPython
-        import genairics, genairics.datasources, genairics.resources
+        import genairics as gax
+        import genairics, genairics.datasources, genairics.resources, genairics.RNAseq
         from genairics.resources import InstallDependencies
         IPython.embed()
         exit()

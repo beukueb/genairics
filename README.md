@@ -171,6 +171,8 @@ Install brew: https://docs.brew.sh/Installation.html
     brew install homebrew/core/fastqc homebrew/science/bedtools
     pip3 install --user genairics
 
+Install fuse from https://osxfuse.github.io/ and sshfs from https://github.com/osxfuse/sshfs/releases
+
 ### HPC
 
 #### Interactive node for debugging

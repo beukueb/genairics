@@ -262,7 +262,7 @@ class mergeAlignResults(luigi.Task):
             samples.append(dir[dir.rindex('/')+1:])
         # Alignment summary file
         counts_df = pd.DataFrame(counts,columns=counts_annot,index=samples).transpose()
-        counts_df.to_csv(self.output()[2].path)
+        counts_df.to_csv(self.output()[1].path)
     
         # Process RSEM counts
         counts = {}
@@ -292,9 +292,17 @@ class PCAplotCounts(luigi.Task):
         default = 1,
         description = 'the minimum average number (over all samples) of reads required for a gene for further analysis'
     )
+    PCAcomponents = luigi.IntParameter(
+        default = 3,
+        description = 'number of PCA components to calculate'
+    )
     
     def output(self):
-        return luigi.LocalTarget('{}/{}/summaries/PCAplot.svg'.format(self.resultsdir,self.project))
+        return [
+            luigi.LocalTarget('{}/{}/summaries/PCAplot.svg'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/PCAvars.svg'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/PCAcomps.csv'.format(self.resultsdir,self.project)),
+        ]
 
     def run(self):
         import matplotlib
@@ -308,7 +316,7 @@ class PCAplotCounts(luigi.Task):
         # Filter counts
         beforeFiltering = len(counts)
         counts = counts[counts.sum(axis=1) >= self.countsFilter * len(counts.columns)]
-        logger.info('Remaining %s of %s after filtering',beforeFiltering,len(counts))
+        logger.info('Remaining %s of %s after filtering',len(counts),beforeFiltering)
         # Normalize
         quantile_transformer = preprocessing.QuantileTransformer(
             output_distribution = 'normal',
@@ -320,15 +328,24 @@ class PCAplotCounts(luigi.Task):
         #X_norm = (X - X.min())/(X.max() - X.min())
         # Transform counts
         X_tran = np.log(X_norm + abs(X_norm.min()) + 1)
-        pca = sklearnPCA(n_components=2)
-        transformed = pd.DataFrame(pca.fit_transform(X_tran),index=counts.columns,columns=['PC1','PC2'])
+        pca = sklearnPCA(n_components=self.PCAcomponents)
+        transformed = pd.DataFrame(
+            pca.fit_transform(X_tran), index = counts.columns,
+            columns = ['PC{}'.format(pc+1) for pc in range(self.PCAcomponents)]
+        )
         transformed['annotation'] = transformed.T.apply(
             lambda x: ' '.join(x.name.split(self.sampleAnnotator)[:self.annotatorRelevant])
         )
-        #pcaComponents = pd.DataFrame(pca.components_,columns=counts.index).T
-        # Make figure
+        pcaComponents = pd.DataFrame(pca.components_.T,index=counts.index,columns=transformed.columns[:-1])
+        pcaComponents.to_csv(self.output()[2].path)
+        # Make figures
+        ## PC plot
         fig = sns.lmplot('PC1', 'PC2', data = transformed, hue = 'annotation', fit_reg = False, scatter_kws={'s':50})
-        fig.savefig(self.output().path)
+        fig.savefig(self.output()[0].path)
+        ## PC variance plot
+        fix, ax = plt.subplots()
+        sns.barplot(np.arange(self.PCAcomponents), pca.explained_variance_ratio_, ax=ax)
+        fig.savefig(self.output()[1].path)
         
 @requires(mergeAlignResults)
 class diffexpTask(luigi.Task):
