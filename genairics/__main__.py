@@ -124,15 +124,10 @@ def main(args=None):
             )
             args+= optionals + positionals
             args = parser.parse_args(args)
-        #wui
-        elif len(sys.argv) == 1 and config.ui == 'wui':
-            from genairics.utils import jobserver
-            jobserver(parser)
-            return "jobserver shutting down" #has to return to avoid executing the rest of main function
         #normal cli
         else:
             #Script started directly
-            if config.ui == 'cli': argcomplete.autocomplete(parser)
+            argcomplete.autocomplete(parser)
             args = parser.parse_args()
     else: args = parser.parse_args(args) # args passed to main function directly
     
