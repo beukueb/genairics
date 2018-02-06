@@ -144,10 +144,13 @@ def startJob(queue,jobstatus,stopevent):
         #main(job)
         jobstatus[jobid] = "finished"
         
-def jobserver(parser):
+def jobserver(args=None):
     import threading, queue, webbrowser, signal, sys
     from genairics import config, logger
+    from genairics.__main__ import prepareParser
     logger.setLevel('DEBUG')
+
+    parser = prepareParser()[0] #parser is first element of tuple returned
 
     stopevent = threading.Event()
     jobqueue = queue.Queue()

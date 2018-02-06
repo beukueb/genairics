@@ -40,7 +40,10 @@ setup(name = package,
       include_package_data = True,
       zip_safe = False,
       entry_points = {
-          'console_scripts': ['genairics=genairics.__main__:main'],
+          'console_scripts': [
+              'genairics=genairics.__main__:main',
+              'gaxs=genairics.utils:jobserver'
+          ],
       },
       test_suite = 'nose.collector',
       tests_require = ['nose']
