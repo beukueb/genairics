@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/pypi/l/genairics.svg)](https://pypi.python.org/pypi/genairics/)
 
 # GENeric AIRtight omICS pipelines
-<img title="genairics logo" src="gax_logo.svg" width="200">
+<img title="genairics logo" src="gax_logo.svg" width="500">
 
 ## Disclosure
 
