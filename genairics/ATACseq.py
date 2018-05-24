@@ -114,6 +114,7 @@ class SamBedFilteringTask(luigi.Task):
     Blacklisting currently only for human data
     """
     filterBlacklist = luigi.BoolParameter(True,description="if human genome, filter blacklisted regions")
+    samtoolsViewQ = luigi.IntParameter(4,description="samtools view -q mapping quality parameter for filtering")
     
     def output(self):
         return (
@@ -127,7 +128,7 @@ class SamBedFilteringTask(luigi.Task):
             
             # Filtering mapped reads
             stdout = local['samtools'](
-                'view', '-b', '-q', 4, '-@', 2,
+                'view', '-b', '-q', self.samtoolsViewQ, '-@', 2,
                 '-o', os.path.join(sampleFile,"Aligned.sortedByCoord.minMQ4.bam"),
 	        os.path.join(sampleFile,"Aligned.sortedByCoord.out.bam")
             )
@@ -166,6 +167,26 @@ class PeakCallingTask(luigi.Task):
     --normalizeTo1x 2451960000  
     """
     callSummits = luigi.BoolParameter(default=False,description="lets MACS2 also call subpeaks")
+    normalizeTo1x = luigi.IntParameter(
+        default=0,
+        description="""
+        MACS2 normalization option. If not provided will default to --normalizeUsingRPKM.
+        Else int needs to be provided of genome size to pass to --normalizeTo1x,
+        e.g. 2451960000 for human genome.
+        """
+    )
+    extsize = luigi.IntParameter(
+        default=200,
+        description="""
+        MACS2 extsize option. If O, --nomodel will not be included.
+        """
+    )
+    peakQ = luigi.FloatParameter(
+        default=.05,
+        description="""
+        MACS2 peak calling q option. Cutoff for peak detection.
+        """
+    )
     
     def output(self):
         return (
@@ -180,7 +201,9 @@ class PeakCallingTask(luigi.Task):
                 stdout = local['macs2'](
                     'callpeak', '-t',
                     os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
-                    '-n', os.path.join(sampleFile,sample), '--nomodel', '--nolambda',
+                    '-n', os.path.join(sampleFile,sample),
+                    *(('--nomodel','--extsize',self.extsize) if self.extsize else ()),
+                    '--nolambda', '-q', self.peakQ,
                     '--keep-dup', 'auto',
                     *(('--call-summits',) if self.callSummits else ())
                 )
@@ -188,7 +211,8 @@ class PeakCallingTask(luigi.Task):
             with local.env(PYTHONPATH=''):
                 stdout = local['bamCoverage'](
                     '-p', str(config.threads),
-                    '--normalizeUsingRPKM', #'--extendReads', #TODO make possible for both single/paired end
+                    *(('--normalizeTo1x',self.normalizeTo1x) if self.normalizeTo1x else ('--normalizeUsingRPKM',)),
+                    #'--extendReads', #TODO make possible for both single/paired end
 		    '-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
 		    '-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
                 )

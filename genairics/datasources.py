@@ -1,4 +1,11 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Datasources
+
+Connecting genairics pipelines to different (raw) data sources.
+
+Todo:
+    * https://support.illumina.com/sequencing/sequencing_software/bcl2fastq-conversion-software.html
+"""
 
 import luigi, logging, os, sys, itertools, glob, pathlib
 from luigi.util import inherits, requires
