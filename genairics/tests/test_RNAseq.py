@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from unittest.mock import Mock, MagicMock, patch, call
 from unittest import TestCase

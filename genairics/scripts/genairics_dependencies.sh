@@ -69,6 +69,14 @@ ant
 chmod 755 bin/bamqc
 ln -s $GAX_REPOS/BamQC/bin/bamqc $GAX_PREFIX/bin/bamqc
 
+## samstat
+cd $GAX_REPOS
+wget https://downloads.sourceforge.net/project/samstat/samstat-1.5.1.tar.gz
+tar -zxf samstat-1.5.1.tar.gz && rm samstat-1.5.1.tar.gz && cd samstat-1.5.1
+./configure
+make
+ln -s $GAX_REPOS/samstat-1.5.1/src/samstat $GAX_PREFIX/bin/samstat
+
 ## RSEM
 cd $GAX_REPOS
 git clone https://github.com/deweylab/RSEM.git && cd RSEM && make

@@ -58,7 +58,8 @@ Python 3 has to be installed: see https://www.python.org/downloads/ for instruct
      . ~/.bashrc
      mkdir -p $WORKON_HOME
      . /usr/local/bin/virtualenvwrapper.sh
-     mkvirtualenv genairics
+     GAXDIR=~/repos/genairics
+     mkvirtualenv -a $GAXDIR -i ipython -r $GAXDIR/requirements.txt genairics
      echo "export GAX_REPOS=$VIRTUAL_ENV/repos" >> $VIRTUAL_ENV/bin/postactivate
      echo "export GAX_PREFIX=$VIRTUAL_ENV" >> $VIRTUAL_ENV/bin/postactivate
      echo "export GAX_RESOURCES=$VIRTUAL_ENV/resources" >> $VIRTUAL_ENV/bin/postactivate
