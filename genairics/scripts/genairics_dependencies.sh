@@ -57,6 +57,18 @@ else
     ln -s $GAX_REPOS/STAR-2.5.3a/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
 fi
 
+## BamQC
+cd $GAX_REPOS
+git clone https://github.com/s-andrews/BamQC.git && cd BamQC
+if [[ -v VSC_HOME ]]; then
+    module load ant
+elif [[ $OSTYPE == *"darwin"* ]]; then
+    brew install ant
+fi
+ant
+chmod 755 bin/bamqc
+ln -s $GAX_REPOS/BamQC/bin/bamqc $GAX_PREFIX/bin/bamqc
+
 ## RSEM
 cd $GAX_REPOS
 git clone https://github.com/deweylab/RSEM.git && cd RSEM && make
