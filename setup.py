@@ -1,7 +1,7 @@
 from setuptools import setup
 
 package = "genairics"
-version = "0.1.33"
+version = "0.1.34"
 
 setup(name = package,
       version = version,
