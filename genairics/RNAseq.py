@@ -302,6 +302,7 @@ class PCAplotCounts(luigi.Task):
             luigi.LocalTarget('{}/{}/summaries/PCAplot.svg'.format(self.resultsdir,self.project)),
             luigi.LocalTarget('{}/{}/summaries/PCAvars.svg'.format(self.resultsdir,self.project)),
             luigi.LocalTarget('{}/{}/summaries/PCAcomps.csv'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/cumulativeReads.svg'.format(self.resultsdir,self.project)),
         ]
 
     def run(self):
@@ -312,7 +313,26 @@ class PCAplotCounts(luigi.Task):
         import numpy as np
         from sklearn import preprocessing
         from sklearn.decomposition import PCA as sklearnPCA
+
+        # Load counts
         counts = pd.read_csv(self.input()[2].path, index_col = 'gene_id')
+
+        # Cumulative read count distribution
+        figcums,axcums = plt.subplots()
+        axcums.set_xscale("log", nonposx='clip', basex = 10)
+        generange = range(len(counts))
+        for c in counts:
+            totalc = counts[c].sum()
+            axcums.plot(
+                generange,
+                counts[c].sort_values(ascending=False).cumsum()*100/totalc,
+                label = c
+            )
+        axcums.set_xlabel('Number of genes')
+        axcums.set_ylabel('Cumulative % of total reads')
+        axcums.legend()
+        figcums.savefig(self.output()[3].path)
+        
         # Filter counts
         beforeFiltering = len(counts)
         counts = counts[counts.sum(axis=1) >= self.countsFilter * len(counts.columns)]
@@ -345,7 +365,7 @@ class PCAplotCounts(luigi.Task):
         ## PC variance plot
         fix, ax = plt.subplots()
         sns.barplot(np.arange(self.PCAcomponents), pca.explained_variance_ratio_, ax=ax)
-        fig.savefig(self.output()[1].path)
+        fix.savefig(self.output()[1].path)
         
 @requires(mergeAlignResults)
 class diffexpTask(luigi.Task):
