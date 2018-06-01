@@ -320,7 +320,7 @@ class PCAplotCounts(luigi.Task):
         # Cumulative read count distribution
         figcums,axcums = plt.subplots()
         axcums.set_xscale("log", nonposx='clip', basex = 10)
-        generange = range(len(counts))
+        generange = range(1,len(counts)+1)
         for c in counts:
             totalc = counts[c].sum()
             axcums.plot(
@@ -364,7 +364,9 @@ class PCAplotCounts(luigi.Task):
         fig.savefig(self.output()[0].path)
         ## PC variance plot
         fix, ax = plt.subplots()
-        sns.barplot(np.arange(self.PCAcomponents), pca.explained_variance_ratio_, ax=ax)
+        sns.barplot(np.arange(self.PCAcomponents)+1, pca.explained_variance_ratio_ * 100, ax=ax)
+        ax.set_xlabel('PCA component')
+        ax.set_ylabel('% variance explained')
         fix.savefig(self.output()[1].path)
         
 @requires(mergeAlignResults)

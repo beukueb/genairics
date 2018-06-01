@@ -5,34 +5,27 @@
 # GENeric AIRtight omICS pipelines
 <img title="genairics logo" src="gax_logo.svg" width="500">
 
-## Disclosure
+## Design goals
 
-There comes a point in time when any human just has to develop their
-own, fully-fledged computational genomics platform. This is not that
-time for me, but it is good to set it as an aim: aiming for the stars,
-landing somewhere on the moon.
+### generic pipelines
 
-### Design goals
-
-#### generic pipelines
-
-Although the pipelines here available are only developed for my
-specific bioinformatics needs and that of my collaborators, they are
-build up in a generic way, and some of the functionality in the main
-genairics package file might help or inspire you to build your own
+The pipelines here available are mainly developed for my specific
+bioinformatics needs and that of my collaborators. They are build up
+in a generic way, and some of the functionality in the main genairics
+package file might help or inspire you to build your own
 pipelines. The core of the pipelines is build with
 [luigi](https://luigi.readthedocs.io) and extensions are provided in
 this package's initialization file.
 
-#### airtight pipelines
+### airtight pipelines
 
 The pipelines are build so they can be started with a single,
-fool-proof command.  This should allow my collaborators, or scientists
-wanting to replicate my results, to easily do so. A
-docker container is provided with the package so the processing
-can be started up on any platform.
+fool-proof command.  This should allow collaborators, or scientists
+wanting to replicate my results, to easily do so. A docker container
+is provided with the package so the processing can be started up on
+any platform.
 
-#### omics pipelines
+### omics pipelines
 
 The pipelines grow organically, as my research needs expand. I aim to
 process any kind of data. If you want to use my set of pipelines, but
@@ -99,8 +92,10 @@ Go to https://www.ugent.be/hpc/en/access/faq/access to apply for access to the H
 #### Execute the following commands
 
     module load pandas
-    pip3 install --user genairics
+    pip3 install --user --upgrade genairics
     mkdir $VSC_DATA_VO_USER/{data,results}
+
+Rerun the first two of these lines whenever you need to upgrade your genairics version.
 
 ## Example run
 
@@ -108,13 +103,11 @@ Go to https://www.ugent.be/hpc/en/access/faq/access to apply for access to the H
 
     docker run -v ~/resources:/resources -v ~/data:/data -v ~/results:/results \
 	       --env-file ~/.BASESPACE_API beukueb/genairics RNAseq \
-	       NSQ_Run240 /data --genome saccharomyces_cerevisiae
+	       NSQ_Run240 --genome saccharomyces_cerevisiae
 
 ### qsub job
 
-    qsub -l walltime=10:50:00 -l nodes=1:ppn=12 -m n \
-    -v project=NSQ_Run240,datadir=$VSC_DATA_VO_USER/data,forwardprob=0,GENAIRICS_ENV_ARGS=RNAseq,SET_LUIGI_FRIENDLY= \
-    $(which genairics)
+    genairics --job-launcher qsub RNAseq NSQ_Run240
    
 ## General setup for sys/vo admin
 
@@ -202,4 +195,12 @@ To debug, reset entrypoint:
     pushd dist
     hdiutil create ./genairics.dmg -srcfolder genuirics -ov
     popd
-    
+
+## Epilogue
+
+There comes a point in time when any human just has to develop their
+own, fully-fledged computational genomics platform. This is not that
+time for me, but it is good to set it as an aim: aiming for the stars,
+landing somewhere on the moon. Of course, with help I should be able
+cover more distance, so if you like this project and want to help out,
+contact me.
