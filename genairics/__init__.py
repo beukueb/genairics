@@ -125,7 +125,7 @@ class LuigiLocalTargetAttribute(luigi.LocalTarget):
         """
         import xattr
         pathlib.Path(self.path).touch()
-        x = xattr.xattr(a.path)
+        x = xattr.xattr(self.path)
         x.set(self.attribute,self.attrvalue)
         
 # Set genairics script dir to be used with % formatting
