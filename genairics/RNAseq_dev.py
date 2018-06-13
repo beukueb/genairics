@@ -63,24 +63,42 @@ class cutadaptConfig(luigi.Config):
     """
     trimReads = luigi.BoolParameter(
         default = False,
-        description = "trip the reads using cutadapt"
+        description = "trim the reads using cutadapt"
     )
-    adapter = luigi.Parameter(
-        default = "GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC",
-        description = "cutadapt adapter to trim"
+    removeUntrimmed = luigi.BoolParameter(
+        default = False,
+        description = "remove the original untrimmed fastq"
     )
-    errorRate = luigi.FloatParameter(
-        default = 0.1,
-        description = "allowed error rate => errors #/length mapping"
+    cutadaptCLIargs = luigi.Parameter(
+        default = "-q 20",
+        description = """Include all the arguments for cutadapt here, 
+        except for input and output related files.
+        If running on the command line, do not forget to inclose with quotes.
+        """
     )
-    qualityCutoff = luigi.IntParameter(
-        default = 10,
-        description = "remove low quality ends of reads"
-    )
-    pairedEnd = luigi.BoolParameter(
-        default=False,
-        description='paired end sequencing reads (NOT IMPLEMENTED YET)'
-    )
+
+@inherits(cutadaptConfig)
+@inherits(setupSequencedSample)
+class cutadaptSampleTask(luigi.Task):
+    """Apply cutadapt to sample
+
+    Currently a CLI configuration string needs to be provided,
+    allowing as flexible a use as possible. You may need to look
+    into the cutadapt documentation to know which arguments to provide.
+    """
+    
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.outfileDir,'untrimmed.fq.gz'))
+        
+    def run(self):
+        stdout = local['cutadapt'](
+            '--cores', config.threads,
+            '-a', self.adapter,
+            '-e', self.errorRate,
+            '-o', self.output().path,
+            self.infile
+        )
+        if stdout: logger.info(stdout)
 
 ## STAR aligning
 @inherits(STARandRSEMindex)

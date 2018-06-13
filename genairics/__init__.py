@@ -83,6 +83,44 @@ class LuigiStringTarget(str):
     def exists(self):
         return bool(self)
 
+class LuigiLocalTargetAttribute(luigi.LocalTarget):
+    """LocalTargetAttribute extends luigi.LocalTarget,
+    reguiring the existence of the LocalTarget and a 
+    specific attribute set in that target
+
+    Args:
+        patch (str): file path passed to LocalTarget.
+        attribute (str): Attribute name that needs to exist in LocalTarget file.
+        attrvalue (bytes): Attrbute value. Will be encoded to bytes if str.
+            Default value is b'set', just indicating that attirbute has been set.
+    """
+    def __init__(self,path,attribute,attrvalue=b'set',**kwargs):
+        if isinstance(attrvalue, str): attrvalue = attrvalue.encode()
+        super().__init__(path,**kwargs)
+        self.attribute = attribute
+        self.attrvalue = attrvalue
+
+    def exists(self):
+        """Returns True if file path exists and file attribute
+        is equal to attrvalue.
+        """
+        if super().exists():
+            import xattr
+            x = xattr.xattr(self.path)
+            if x.has_key(self.attribute):
+                return x.get(self.attribute) == self.attrvalue
+        # All other options return False
+        return False
+
+    def touch(self):
+        """touch LocalTarget file and set extended attribute to attrvalue
+        If file does not exist it will be created.
+        """
+        import xattr
+        pathlib.Path(self.path).touch()
+        x = xattr.xattr(a.path)
+        x.set(self.attribute,self.attrvalue)
+        
 # Set genairics script dir to be used with % formatting
 gscripts = '{}/scripts/%s'.format(os.path.dirname(__file__))
 

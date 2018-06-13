@@ -14,6 +14,7 @@ setup(name = package,
       install_requires = [
           'luigi',
           'plumbum',
+          'xattr',
           'matplotlib',
           'seaborn',
           'pandas',
