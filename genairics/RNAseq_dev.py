@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits, requires
+from genairics import LuigiLocalTargetAttribute
 from plumbum import local, colors
 import pandas as pd
 import logging
@@ -65,12 +66,12 @@ class cutadaptConfig(luigi.Config):
         default = False,
         description = "trim the reads using cutadapt"
     )
-    removeUntrimmed = luigi.BoolParameter(
+    removeUntrimmedFile = luigi.BoolParameter(
         default = False,
         description = "remove the original untrimmed fastq"
     )
     cutadaptCLIargs = luigi.Parameter(
-        default = "-q 20",
+        default = "-q 20 -m 30",
         description = """Include all the arguments for cutadapt here, 
         except for input and output related files.
         If running on the command line, do not forget to inclose with quotes.
@@ -85,22 +86,40 @@ class cutadaptSampleTask(luigi.Task):
     Currently a CLI configuration string needs to be provided,
     allowing as flexible a use as possible. You may need to look
     into the cutadapt documentation to know which arguments to provide.
+
+    TODO implement for paired end
     """
     
     def output(self):
-        return luigi.LocalTarget(os.path.join(self.outfileDir,'untrimmed.fq.gz'))
+        return LuigiLocalTargetAttribute(
+            self.infile1, self.task_family, 'done'
+        )
+        #return luigi.LocalTarget(
+        #    os.path.join(
+        #        self.outfileDir,
+        #        '.completed_{}'.format(self.task_family)
+        #        if self.removeUntrimmedFile or not self.trimReads
+        #        else 'untrimmed.fq.gz'
+        #    )
+        #)
         
     def run(self):
-        stdout = local['cutadapt'](
-            '--cores', config.threads,
-            '-a', self.adapter,
-            '-e', self.errorRate,
-            '-o', self.output().path,
-            self.infile
-        )
-        if stdout: logger.info(stdout)
+        if self.trimReads:
+            import shutil
+            untrimmed1 = infile1.replace('.fastq.gz','_untrimmed.fastq.gz')
+            shutil.copy(infile1,untrimmed1)
+            stdout = local['cutadapt'](
+                '--cores', config.threads,
+                *(self.cutadaptCLIargs.split()),
+                '-o', self.output().path, #is actually output file here (overwriting original infile1)
+                untrimmed1
+            )
+            if stdout: logger.info(stdout)
+            if self.removeUntrimmedFile: os.unlink(untrimmed1)
+        if self.output().pathExists(): self.output().touch()
 
 ## STAR aligning
+@inherits(cutadaptConfig)
 @inherits(STARandRSEMindex)
 class STARconfig(luigi.Config):
     """
@@ -230,7 +249,7 @@ class processTranscriptomicSampleTask(luigi.Task):
     
     def run(self):
         self.clone(setupSequencedSample).run()
-        #TODO trim quality ends
+        self.clone(cutadaptSampleTask).run()
         self.clone(STARsample).run()
         self.clone(RSEMsample).run()
         pathlib.Path(self.output().path).touch()

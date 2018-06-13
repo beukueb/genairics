@@ -100,11 +100,18 @@ class LuigiLocalTargetAttribute(luigi.LocalTarget):
         self.attribute = attribute
         self.attrvalue = attrvalue
 
+    def pathExists(self):
+        """Returns the LocalTarget exists result.
+        Can be useful to check prior to touching the attribute,
+        as this would automatically create the file.
+        """
+        return super().exists()
+        
     def exists(self):
         """Returns True if file path exists and file attribute
         is equal to attrvalue.
         """
-        if super().exists():
+        if self.pathExists():
             import xattr
             x = xattr.xattr(self.path)
             if x.has_key(self.attribute):
