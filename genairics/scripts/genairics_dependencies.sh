@@ -21,17 +21,27 @@ mkdir -p $GAX_ENVS
 # https://github.com/kislyuk/argcomplete/
 activate-global-python-argcomplete
 
-## wrapprogram function -> takes program, and wraps module needed on hpc
+## wrapprogram function -> takes program ($1), and wraps module ($2) needed on hpc
+## if $3 == nopurge other modules are not purged, default is to purge
 function wrapprogram {
     wrapperscript=$GAX_PREFIX/bin/$(basename $1)
     echo '#!/bin/env bash' > $wrapperscript
-    echo 'module purge' >> $wrapperscript
+    if [[ ! "$3" == "nopurge" ]]; then
+	echo 'module purge' >> $wrapperscript
+    fi
     echo "module load $2" >> $wrapperscript
     echo $1 '"$@"' >> $wrapperscript
     chmod +x $wrapperscript
 }
 
 ## fastqc -> install with apt-get, brew, ...
+
+## Trim Galore
+cd $GAX_REPOS
+curl -fsSL https://github.com/FelixKrueger/TrimGalore/archive/0.4.5.tar.gz -o trim_galore.tar.gz
+tar xvzf trim_galore.tar.gz
+rm trim_galore.tar.gz
+ln -s $GAX_REPOS/TrimGalore-0.4.5/trim_galore $GAX_PREFIX/bin/trim_galore
 
 ## bowtie2
 if [ ! $(command -v bowtie2) ]; then
@@ -57,7 +67,8 @@ else
     ln -s $GAX_REPOS/STAR-2.5.3a/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
 fi
 
-## BamQC
+## Quality control tools
+### BamQC
 cd $GAX_REPOS
 git clone https://github.com/s-andrews/BamQC.git && cd BamQC
 if [[ -v VSC_HOME ]]; then
@@ -69,13 +80,30 @@ ant
 chmod 755 bin/bamqc
 ln -s $GAX_REPOS/BamQC/bin/bamqc $GAX_PREFIX/bin/bamqc
 
-## samstat
+### samstat
 cd $GAX_REPOS
 wget https://downloads.sourceforge.net/project/samstat/samstat-1.5.1.tar.gz
 tar -zxf samstat-1.5.1.tar.gz && rm samstat-1.5.1.tar.gz && cd samstat-1.5.1
 ./configure
 make
 ln -s $GAX_REPOS/samstat-1.5.1/src/samstat $GAX_PREFIX/bin/samstat
+
+### RSeQC #=> TODO not fully operational yet, is not possible to symbolically link executable
+#### download gene models (further info: https://sourceforge.net/projects/rseqc/files/BED/Human_Homo_sapiens/)
+cd $GAX_REPOS && mkdir RSeQC_gene_models && cd RSeQC_gene_models
+for rseqcref in hg38_rRNA.bed.gz hg38.HouseKeepingGenes.bed.gz; do
+    wget https://sourceforge.net/projects/rseqc/files/BED/Human_Homo_sapiens/$rseqcref
+    gunzip $rseqcref
+done
+if [[ -v VSC_HOME ]]; then
+    module load LZO
+    virtualenv --python=python2.7 $GAX_ENVS/rseqc_env
+    PYTHONPATH= $GAX_ENVS/rseqc_env/bin/pip install RSeQC --prefix=$GAX_ENVS/rseqc_env
+    #PYTHONPATH= $GAX_ENVS/rseqc_env/bin/python $GAX_ENVS/rseqc_env/bin/geneBody_coverage.py -h
+elif [[ $OSTYPE == *"darwin"* ]]; then
+    brew install lzo
+    pip2 install --user RSeQC
+fi
 
 ## RSEM
 cd $GAX_REPOS
