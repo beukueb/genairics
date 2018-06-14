@@ -106,8 +106,11 @@ class cutadaptSampleTask(luigi.Task):
     def run(self):
         if self.trimReads:
             import shutil
-            untrimmed1 = self.infile1.replace('.fastq.gz','_untrimmed.fastq.gz')
-            shutil.copy(self.infile1,untrimmed1)
+            untrimmed1 = os.path.join(
+                self.outfileDir,
+                os.path.basename(self.infile1).replace('.fastq.gz','_untrimmed.fastq.gz')
+            )
+            shutil.move(self.infile1,untrimmed1)
             stdout = local['cutadapt'](
                 '--cores', config.threads,
                 *(self.cutadaptCLIargs.split()),
