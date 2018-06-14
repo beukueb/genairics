@@ -35,13 +35,20 @@ function wrapprogram {
 }
 
 ## fastqc -> install with apt-get, brew, ...
+if [[ -v VSC_HOME ]]; then
+    wrapprogram fastqc fastqc
+fi
 
 ## Trim Galore
 cd $GAX_REPOS
 curl -fsSL https://github.com/FelixKrueger/TrimGalore/archive/0.4.5.tar.gz -o trim_galore.tar.gz
 tar xvzf trim_galore.tar.gz
 rm trim_galore.tar.gz
-ln -s $GAX_REPOS/TrimGalore-0.4.5/trim_galore $GAX_PREFIX/bin/trim_galore
+if [[ -v VSC_HOME ]]; then
+    wrapprogram $GAX_REPOS/TrimGalore-0.4.5/trim_galore fastqc nopurge
+else
+    ln -s $GAX_REPOS/TrimGalore-0.4.5/trim_galore $GAX_PREFIX/bin/trim_galore
+fi
 
 ## bowtie2
 if [ ! $(command -v bowtie2) ]; then

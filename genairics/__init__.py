@@ -178,8 +178,7 @@ typeMapping = {
 
 # Generic tasks
 class setupProject(luigi.Task):
-    """
-    setupProject prepares the logistics for running the pipeline and directories for the results
+    """setupProject prepares the logistics for running the pipeline and directories for the results
     optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
     """
     project = luigi.Parameter(description='name of the project. if you want the same name as Illumina run name, provide here')
@@ -206,8 +205,8 @@ class setupProject(luigi.Task):
 
 @requires(setupProject)
 class setupLogging(luigi.Task):
-    """
-    Registers the logging file
+    """Registers the logging file
+
     Always needs to run, to enable logging to the file
     """
     def output(self):
@@ -226,11 +225,10 @@ class setupLogging(luigi.Task):
         if not self.complete(): pathlib.Path(self.output().path).touch()
             
 class setupSequencedSample(luigi.Task):
-    """
-    sets up the output directory for a specified sequenced sample
+    """Sets up the output directory for a specified sequenced sample
     can be either single-end or paired end
 
-    this is ended as the starting point of pipelines that process 1 sample
+    this is intended as the starting point of pipelines that fully process 1 sample a time
     """
     infile1 = luigi.Parameter(description = 'fastqfile 1')
     infile2 = luigi.Parameter(default = '', description = 'fastqfile 2 in case of paired-end sequencing')

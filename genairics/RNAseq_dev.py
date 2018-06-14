@@ -22,17 +22,14 @@ import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import logger, config, gscripts, setupProject, setupSequencedSample
-from genairics.datasources import BaseSpaceSource, mergeFASTQs
+from genairics.datasources import BaseSpaceSource, mergeFASTQs, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
-@inherits(mergeFASTQs)
+@requires(mergeFASTQs)
 class qualityCheck(luigi.Task):
     """
     Runs fastqc on all samples and makes an overall summary
     """
-    def requires(self):
-        return self.clone_parent()
-        
     def output(self):
         return (
             luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
@@ -57,6 +54,26 @@ class qualityCheck(luigi.Task):
         pathlib.Path(self.output()[0].path).touch()
 
 # per sample subtasks
+@requires(mergeSampleFASTQs)
+class sampleQualityCheck(luigi.Task):
+    """Check the quality of a single sample
+
+    Uses fastqc.
+    """
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
+
+    def run(self):
+        tmpdir = self.output().path+'_tmp'
+        os.mkdir(tmpdir)
+        stdout = local['fastqc'](
+            '-o', tmpdir,
+            '-t', config.threads,
+            *((self.input()[0].path, self.input()[1].path) if self.inputfile2
+              else (self.input().path,))
+        )
+        os.rename(tmpdir,self.output().path)
+
 ## read quality trimming
 class cutadaptConfig(luigi.Config):
     """
@@ -79,7 +96,7 @@ class cutadaptConfig(luigi.Config):
     )
 
 @inherits(cutadaptConfig)
-@inherits(setupSequencedSample)
+@inherits(mergeSampleFASTQs)
 class cutadaptSampleTask(luigi.Task):
     """Apply cutadapt to sample
 
@@ -89,10 +106,12 @@ class cutadaptSampleTask(luigi.Task):
 
     TODO implement for paired end
     """
-    
+    def requires(self):
+        self.clone(mergeSampleFASTQs)
+        
     def output(self):
         return LuigiLocalTargetAttribute(
-            self.infile1, self.task_family, 'done'
+            self.input().path, self.task_family, 'done'
         )
         #return luigi.LocalTarget(
         #    os.path.join(
@@ -108,9 +127,9 @@ class cutadaptSampleTask(luigi.Task):
             import shutil
             untrimmed1 = os.path.join(
                 self.outfileDir,
-                os.path.basename(self.infile1).replace('.fastq.gz','_untrimmed.fastq.gz')
+                os.path.basename(self.input().path).replace('.fastq.gz','_untrimmed.fastq.gz')
             )
-            shutil.move(self.infile1,untrimmed1)
+            shutil.move(self.input().path,untrimmed1)
             stdout = local['cutadapt'](
                 '--cores', config.threads,
                 *(self.cutadaptCLIargs.split()),
@@ -142,7 +161,7 @@ class STARconfig(luigi.Config):
     )    
 
 @inherits(STARconfig)
-@inherits(setupSequencedSample)
+@inherits(mergeSampleFASTQs)
 class STARsample(luigi.Task):
     """
     Task that does the STAR alignment
@@ -172,7 +191,7 @@ class STARsample(luigi.Task):
     fi
     """
     def requires(self):
-        return self.clone(setupSequencedSample)
+        return self.clone(mergeSampleFASTQs)
 
     def output(self):
         return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
@@ -182,7 +201,7 @@ class STARsample(luigi.Task):
             '--runThreadN', config.threads,
             '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
                 species=self.genome,release=self.release),
-            '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
+            '--readFilesIn', self.input().path, *((self.infile2,) if self.infile2 else ()), #TODO check paired end
 	    '--readFilesCommand', self.readFilesCommand,
 	    '--outFileNamePrefix', os.path.join(self.input().path,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
@@ -252,13 +271,15 @@ class processTranscriptomicSampleTask(luigi.Task):
     
     def run(self):
         self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(sampleQualityCheck).run()
         self.clone(cutadaptSampleTask).run()
         self.clone(STARsample).run()
         self.clone(RSEMsample).run()
         pathlib.Path(self.output().path).touch()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
-@inherits(mergeFASTQs)
+#@inherits(mergeFASTQs)
 @inherits(RSEMconfig)    
 class processTranscriptomicSamples(luigi.Task):
     """
@@ -282,14 +303,11 @@ class processTranscriptomicSamples(luigi.Task):
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks
-        for fastqfile in glob.glob(os.path.join(
-                self.datadir,self.project,
-                '*_R1.fastq.gz' if self.pairedEnd else '*.fastq.gz')
-        ):
-            sample = os.path.basename(fastqfile).replace('.fastq.gz','')
+        for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
+            sample = os.path.basename(fastqdir)
             processTranscriptomicSampleTask( #OPTIONAL future implement with yield
-                infile1 = fastqfile,
-                infile2 = fastqfile.replace('_R1.','_R2.') if self.pairedEnd else '',
+                infile1 = fastqdir,
+                infile2 = self.pairedEnd, #TODO restructure setupSequencedSample for more sensible variable names
                 outfileDir = os.path.join(self.output()[1].path,sample), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
             ).run()

@@ -10,7 +10,7 @@ Todo:
 import luigi, logging, os, sys, itertools, glob, pathlib
 from luigi.util import inherits, requires
 from plumbum import local
-from genairics import config, setupProject
+from genairics import config, setupProject, setupSequencedSample
 from genairics.resources import RetrieveGenome
 
 @inherits(setupProject)
@@ -101,6 +101,9 @@ class BaseSpaceSource(luigi.Task):
 class mergeFASTQs(luigi.Task):
     """
     Merge fastqs if one sample contains more than one fastq
+    This task merges the fastq's for all samples.
+    When running a per sample analysis you can also use the
+    mergeSampleFASTQs.
     """
     dirstructure = luigi.Parameter(
         default='multidir',
@@ -148,6 +151,46 @@ class mergeFASTQs(luigi.Task):
         # complete file and log file get touched even if no execution is necessary
         pathlib.Path(self.output()[0].path).touch()
         pathlib.Path(self.output()[1].path).touch()
+
+@requires(setupSequencedSample)
+class mergeSampleFASTQs(luigi.Task):
+    """
+    Merges the fastqs of one sample. Expects the `setupSequencedSample` `infile1` and `infile2`
+    to be the directories with the original fastq's. Paired end is assumed if `infile2` is provided.
+    """
+    def output(self):
+        infile1Target = luigi.LocalTarget(
+            os.path.join(
+                self.outfileDir,
+                '{}{}.fastq.gz'.format(
+                    os.path.basename(self.infile1),
+                    '_R1' if self.infile2 else ''
+                )
+            )
+        )
+        infile2Target = luigi.LocalTarget(
+            os.path.join(
+                self.outfileDir,
+                '{}_R2.fastq.gz'.format(os.path.basename(self.infile1))
+            )
+        ) if self.infile2 else None
+        return (infile1Target,infile2Target) if self.infile2 else infile1Target
+
+    def run(self):
+        if self.infile2: #if paired-end
+            renamepath = self.output()[0].path
+            (local['cat'] > self.output()[0].path+'_tmp')(
+                *glob.glob(os.path.join(self.infile1,'*_R1_*.fastq.gz'))
+            )
+            (local['cat'] > self.output()[1].path)(
+                *glob.glob(os.path.join(self.infile1,'*_R2_*.fastq.gz'))
+            )
+        else: #if single-end or treated as such
+            renamepath = self.output().path
+            (local['cat'] > self.output().path+'_tmp')(
+                *glob.glob(os.path.join(self.infile1,'*.fastq.gz'))
+            )
+        os.rename(renamepath+'_tmp', renamepath)
 
 def groupfilelines(iterable, n=4, fillvalue=None):
     """
