@@ -208,7 +208,7 @@ class STARsample(luigi.Task):
             '--readFilesIn', self.input()[0].path,
             *((self.input()[1].path,) if self.pairedEnd else ()),
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', os.path.join(self.input().path,'./'),
+	    '--outFileNamePrefix', os.path.join(self.sampleDir,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
