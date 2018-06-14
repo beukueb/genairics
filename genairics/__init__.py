@@ -230,8 +230,8 @@ class setupSequencedSample(luigi.Task):
 
     this is intended as the starting point of pipelines that fully process 1 sample a time
     """
-    infile1 = luigi.Parameter(description = 'fastqfile 1')
-    infile2 = luigi.Parameter(default = '', description = 'fastqfile 2 in case of paired-end sequencing')
+    sampleDir = luigi.Parameter(description = 'dir with sample fastq files')
+    pairedEnd = luigi.BoolParameter(default = False, description = 'True in case of paired-end sequencing')
     outfileDir = luigi.Parameter(description = 'sample output dir')
 
     def output(self):

@@ -25,7 +25,7 @@ from genairics import logger, config, gscripts, setupProject, setupSequencedSamp
 from genairics.datasources import BaseSpaceSource, mergeFASTQs, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
-@requires(mergeFASTQs)
+@requires(mergeFASTQs) #need to rework this task to summarize based on individual sample fastqc output
 class qualityCheck(luigi.Task):
     """
     Runs fastqc on all samples and makes an overall summary
@@ -69,8 +69,8 @@ class sampleQualityCheck(luigi.Task):
         stdout = local['fastqc'](
             '-o', tmpdir,
             '-t', config.threads,
-            *((self.input()[0].path, self.input()[1].path) if self.inputfile2
-              else (self.input().path,))
+            self.input()[0].path,
+            *((self.input()[1].path,) if self.pairedEnd else ())
         )
         os.rename(tmpdir,self.output().path)
 
@@ -111,7 +111,7 @@ class cutadaptSampleTask(luigi.Task):
         
     def output(self):
         return LuigiLocalTargetAttribute(
-            self.input().path, self.task_family, 'done'
+            self.input()[0].path, self.task_family, 'done'
         )
         #return luigi.LocalTarget(
         #    os.path.join(
@@ -127,9 +127,9 @@ class cutadaptSampleTask(luigi.Task):
             import shutil
             untrimmed1 = os.path.join(
                 self.outfileDir,
-                os.path.basename(self.input().path).replace('.fastq.gz','_untrimmed.fastq.gz')
+                os.path.basename(self.input()[0].path).replace('.fastq.gz','_untrimmed.fastq.gz')
             )
-            shutil.move(self.input().path,untrimmed1)
+            shutil.move(self.input()[0].path,untrimmed1)
             stdout = local['cutadapt'](
                 '--cores', config.threads,
                 *(self.cutadaptCLIargs.split()),
@@ -158,7 +158,11 @@ class STARconfig(luigi.Config):
     quantMode = luigi.Parameter(
         default='TranscriptomeSAM GeneCounts',
         description='STAR quantMode parameter (can contain more than one argument separated by 1 space)'
-    )    
+    )
+    removeFASTQs = luigi.BoolParameter(
+        default = True,
+        description = 'The merged FASTQs are removed after mapping.'
+    )
 
 @inherits(STARconfig)
 @inherits(mergeSampleFASTQs)
@@ -201,13 +205,19 @@ class STARsample(luigi.Task):
             '--runThreadN', config.threads,
             '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
                 species=self.genome,release=self.release),
-            '--readFilesIn', self.input().path, *((self.infile2,) if self.infile2 else ()), #TODO check paired end
+            '--readFilesIn', self.input()[0].path,
+            *((self.input()[1].path,) if self.pairedEnd else ()),
 	    '--readFilesCommand', self.readFilesCommand,
 	    '--outFileNamePrefix', os.path.join(self.input().path,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
         if stdout: logger.info('%s output:\n%s',self.task_family,stdout)
+
+        # Remove processed FASTQs
+        if self.removeFASTQs:
+            os.unlink(self.input()[0].path)
+            if self.pairedEnd: os.unlink(self.input()[1].path)
 
         # Check point
         pathlib.Path(self.output().path).touch()
@@ -306,8 +316,8 @@ class processTranscriptomicSamples(luigi.Task):
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
             processTranscriptomicSampleTask( #OPTIONAL future implement with yield
-                infile1 = fastqdir,
-                infile2 = self.pairedEnd, #TODO restructure setupSequencedSample for more sensible variable names
+                sampleDir = fastqdir,
+                pairedEnd = self.pairedEnd, #TODO restructure setupSequencedSample for more sensible variable names
                 outfileDir = os.path.join(self.output()[1].path,sample), #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
             ).run()
@@ -498,8 +508,8 @@ class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(mergeFASTQs)
-        yield self.clone(qualityCheck)
+        #yield self.clone(mergeFASTQs)
+        #yield self.clone(qualityCheck)
         yield self.clone(processTranscriptomicSamples)
         yield self.clone(mergeAlignResults)
         yield self.clone(PCAplotCounts)

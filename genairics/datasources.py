@@ -163,34 +163,32 @@ class mergeSampleFASTQs(luigi.Task):
             os.path.join(
                 self.outfileDir,
                 '{}{}.fastq.gz'.format(
-                    os.path.basename(self.infile1),
-                    '_R1' if self.infile2 else ''
+                    os.path.basename(self.sampleDir),
+                    '_R1' if self.pairedEnd else ''
                 )
             )
         )
         infile2Target = luigi.LocalTarget(
             os.path.join(
                 self.outfileDir,
-                '{}_R2.fastq.gz'.format(os.path.basename(self.infile1))
+                '{}_R2.fastq.gz'.format(os.path.basename(self.sampleDir))
             )
-        ) if self.infile2 else None
-        return (infile1Target,infile2Target) if self.infile2 else infile1Target
+        ) if self.pairedEnd else None
+        return (infile1Target,infile2Target) if self.pairedEnd else (infile1Target,)
 
     def run(self):
-        if self.infile2: #if paired-end
-            renamepath = self.output()[0].path
+        if self.pairedEnd: #if paired-end
             (local['cat'] > self.output()[0].path+'_tmp')(
-                *glob.glob(os.path.join(self.infile1,'*_R1_*.fastq.gz'))
+                *glob.glob(os.path.join(self.sampleDir,'*_R1_*.fastq.gz'))
             )
             (local['cat'] > self.output()[1].path)(
-                *glob.glob(os.path.join(self.infile1,'*_R2_*.fastq.gz'))
+                *glob.glob(os.path.join(self.sampleDir,'*_R2_*.fastq.gz'))
             )
         else: #if single-end or treated as such
-            renamepath = self.output().path
-            (local['cat'] > self.output().path+'_tmp')(
-                *glob.glob(os.path.join(self.infile1,'*.fastq.gz'))
+            (local['cat'] > self.output()[0].path+'_tmp')(
+                *glob.glob(os.path.join(self.sampleDir,'*.fastq.gz'))
             )
-        os.rename(renamepath+'_tmp', renamepath)
+        os.rename(self.output()[0].path+'_tmp', self.output()[0].path)
 
 def groupfilelines(iterable, n=4, fillvalue=None):
     """

@@ -99,7 +99,8 @@ class alignATACsamplesTask(luigi.Task):
             alignATACsampleTask( #OPTIONAL future implement with yield
                 genomeDir=self.input()['genome'][0].path,
                 readFilesIn=fastqfile,
-                outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'), #optionally in future first to temp location
+                outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'),
+                #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in alignSTARconfig.get_param_names()}
             ).run()
         
