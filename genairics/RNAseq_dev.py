@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-#PBS -N RNAseqPipeline
-#PBS -l nodes=1:ppn=16
-#PBS -l walltime=72:00:00
-#PBS -m be
 """
 Full pipeline starting from BaseSpace fastq project
 """
@@ -208,7 +204,7 @@ class STARsample(luigi.Task):
             '--readFilesIn', self.input()[0].path,
             *((self.input()[1].path,) if self.pairedEnd else ()),
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', os.path.join(self.sampleDir,'./'),
+	    '--outFileNamePrefix', os.path.join(self.outfileDir,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
