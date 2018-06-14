@@ -257,7 +257,7 @@ class RSEMsample(luigi.Task):
     def run(self):
         stdout = local['rsem-calculate-expression'](
             '-p', config.threads, '--alignments',
-            *(('--paired-end',) if self.infile2 else ()),
+            *(('--paired-end',) if self.pairedEnd else ()),
             '--forward-prob', self.forwardprob,
             os.path.join(self.input()[0].path,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
