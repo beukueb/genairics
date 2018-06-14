@@ -107,7 +107,7 @@ class cutadaptSampleTask(luigi.Task):
     TODO implement for paired end
     """
     def requires(self):
-        self.clone(mergeSampleFASTQs)
+        return self.clone(mergeSampleFASTQs)
         
     def output(self):
         return LuigiLocalTargetAttribute(
