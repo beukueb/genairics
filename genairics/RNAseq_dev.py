@@ -295,6 +295,10 @@ class processTranscriptomicSamples(luigi.Task):
     """
     Process transciptomic samples for RNAseq with STAR aligner
     """
+    pairedEnd = luigi.BoolParameter(
+        default=False,
+        description='paired end sequencing reads'
+    )
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
 
     def output(self):
