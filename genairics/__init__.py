@@ -112,10 +112,14 @@ class LuigiLocalTargetAttribute(luigi.LocalTarget):
         is equal to attrvalue.
         """
         if self.pathExists():
-            import xattr
-            x = xattr.xattr(self.path)
-            if x.has_key(self.attribute):
-                return x.get(self.attribute) == self.attrvalue
+            try:
+                import xattr
+                x = xattr.xattr(self.path)
+                if x.has_key(self.attribute):
+                    return x.get(self.attribute) == self.attrvalue
+            except OSError:
+                with open(self.attrfilename(),'rb') as attrfile:
+                    return attrfile.read() == self.attrvalue
         # All other options return False
         return False
 
@@ -123,10 +127,29 @@ class LuigiLocalTargetAttribute(luigi.LocalTarget):
         """touch LocalTarget file and set extended attribute to attrvalue
         If file does not exist it will be created.
         """
-        import xattr
         pathlib.Path(self.path).touch()
-        x = xattr.xattr(self.path)
-        x.set(self.attribute,self.attrvalue)
+        try:
+            import xattr
+            x = xattr.xattr(self.path)
+            x.set(self.attribute,self.attrvalue)
+        except OSError:
+            with open(self.attrfilename(),'wb') as attrfile:
+                attrfile.write(self.attrvalue)
+
+    def attrfilename(self):
+        """If xattr is not os/fs supported,
+        this function provides a filename 
+        where attrvalue can be stored.
+
+        TODO upon removing target this attrfile is not removed
+        """
+        return os.path.join(
+            os.path.dirname(self.path),
+            '.{}_{}.attr'.format(
+                os.path.basename(self.path),
+                self.attribute
+            )
+        )
         
 # Set genairics script dir to be used with % formatting
 gscripts = '{}/scripts/%s'.format(os.path.dirname(__file__))
