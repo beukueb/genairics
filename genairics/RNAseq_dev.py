@@ -289,18 +289,13 @@ class processTranscriptomicSampleTask(luigi.Task):
         pathlib.Path(self.output().path).touch()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
-#@inherits(mergeFASTQs)
+@inherits(setupProject)
 @inherits(RSEMconfig)    
 class processTranscriptomicSamples(luigi.Task):
     """
     Process transciptomic samples for RNAseq with STAR aligner
     """
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
-
-    def requires(self):
-        return {
-            'fastqs':self.clone(mergeFASTQs)
-        }
 
     def output(self):
         return (
