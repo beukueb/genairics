@@ -36,7 +36,7 @@ function wrapprogram {
 
 ## fastqc -> install with apt-get, brew, ...
 if [[ -v VSC_HOME ]]; then
-    wrapprogram fastqc fastqc
+    wrapprogram fastqc FastQC
 fi
 
 ## Trim Galore
