@@ -319,7 +319,7 @@ class processTranscriptomicSamples(luigi.Task):
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            )
+            ).run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
