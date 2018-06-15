@@ -159,36 +159,16 @@ class STARconfig(luigi.Config):
         default = True,
         description = 'The merged FASTQs are removed after mapping.'
     )
+    samstat = luigi.BoolParameter(
+        default = True,
+        description = 'Run samstat on transcriptome bam file.'
+    )
 
 @inherits(STARconfig)
 @inherits(mergeSampleFASTQs)
 class STARsample(luigi.Task):
     """
     Task that does the STAR alignment
-
-    Currently fq's not moved first to tmp dir TODO
-    Previous implementation that did that in the bash script:
-    #Prepare workdir
-    if [ "$PBS_JOBID" ]; then
-    cd $TMPDIR
-    if [ -d fastqs ]; then
-	# if quality check ran previously on same node, fastqs will already be present
-	mkdir alignmentResults
-    else
-	mkdir {fastqs,alignmentResults}
-	cp $datadir/$project/*.fastq.gz fastqs/
-    fi
-    outdir=$TMPDIR/alignmentResults
-    else
-    cd $datadir/../results/$project/
-    mkdir alignmentResults
-    outdir=$datadir/../results/$project/alignmentResults
-    fi
-
-    at the end tmp results were moved to final destination:
-    if [ "$PBS_JOBID" ]; then
-    mv $TMPDIR/alignmentResults $datadir/../results/${project}/alignmentResults${suffix}
-    fi
     """
     def requires(self):
         return self.clone(mergeSampleFASTQs)
@@ -215,6 +195,12 @@ class STARsample(luigi.Task):
             os.unlink(self.input()[0].path)
             if self.pairedEnd: os.unlink(self.input()[1].path)
 
+        # Samstat
+        if self.samstat:
+            stdout = local['samstat'](
+                os.path.join(self.outfileDir,'Aligned.toTranscriptome.out.bam')
+            )
+        
         # Check point
         pathlib.Path(self.output().path).touch()
 
