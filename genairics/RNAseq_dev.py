@@ -266,6 +266,27 @@ class RSEMsample(luigi.Task):
         pathlib.Path(self.output().path).touch()
 
 # the sample pipeline can inherit and clone the sample subtasks directly
+@inherits(RSEMsample)
+class processTranscriptomicSampleTask(luigi.Task):
+    """
+    This wrappers makes sure all the individuel sample tasks get run.
+    Each task should be idempotent to avoid issues.
+    """
+    
+    def run(self):
+        #yield subtasks; if completed will go to next subtask
+        self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(sampleQualityCheck).run()
+        self.clone(cutadaptSampleTask).run()
+        self.clone(STARsample).run()
+        self.clone(RSEMsample).run()
+
+        pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(setupProject)
 @inherits(RSEMconfig)    
@@ -273,27 +294,6 @@ class processTranscriptomicSamples(luigi.Task):
     """
     Process transciptomic samples for RNAseq with STAR aligner
     """
-    @inherits(RSEMsample)
-    class processTranscriptomicSampleTask(luigi.Task):
-        """
-        This wrappers makes sure all the individuel sample tasks get run.
-        Each task should be idempotent to avoid issues.
-        """
-        
-        def run(self):
-            #yield subtasks; if completed will go to next subtask
-            self.clone(setupSequencedSample).run()
-            self.clone(mergeSampleFASTQs).run()
-            self.clone(sampleQualityCheck).run()
-            self.clone(cutadaptSampleTask).run()
-            self.clone(STARsample).run()
-            self.clone(RSEMsample).run()
-    
-            pathlib.Path(self.output().path).touch()
-    
-        def output(self):
-            return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
-    
     pairedEnd = luigi.BoolParameter(
         default=False,
         description='paired end sequencing reads'
@@ -314,7 +314,7 @@ class processTranscriptomicSamples(luigi.Task):
         tasks = []
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            yield processTranscriptomicSampleTask(
+            processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
