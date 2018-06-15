@@ -272,8 +272,6 @@ class processTranscriptomicSampleTask(luigi.Task):
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
-    processTranscriptomicSampleNumber = luigi.IntParameter()
-    
     def output(self):
         return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
     
@@ -312,15 +310,14 @@ class processTranscriptomicSamples(luigi.Task):
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
-        for i,fastqdir in enumerate(glob.glob(os.path.join(self.datadir, self.project, '*'))):
+        for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            yield processTranscriptomicSampleTask(
-                processTranscriptomicSampleNumber = i,
+            processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            )
+            ).run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
