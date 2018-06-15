@@ -315,7 +315,7 @@ class processTranscriptomicSamples(luigi.Task):
         for i,fastqdir in enumerate(glob.glob(os.path.join(self.datadir, self.project, '*'))):
             sample = os.path.basename(fastqdir)
             yield processTranscriptomicSampleTask(
-                processTranscriptomicSamples = i,
+                processTranscriptomicSampleNumber = i,
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
