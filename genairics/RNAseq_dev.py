@@ -18,36 +18,8 @@ import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import logger, config, gscripts, setupProject, setupSequencedSample
-from genairics.datasources import BaseSpaceSource, mergeFASTQs, mergeSampleFASTQs
+from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
-
-@requires(mergeFASTQs) #need to rework this task to summarize based on individual sample fastqc output
-class qualityCheck(luigi.Task):
-    """
-    Runs fastqc on all samples and makes an overall summary
-    """
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/QCresults'.format(self.resultsdir,self.project)),
-            luigi.LocalTarget('{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project))
-        )
-
-    def run(self):
-        import zipfile
-        from io import TextIOWrapper
-        
-        local[gscripts % 'qualitycheck.sh'](self.project, self.datadir)
-        qclines = []
-        for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
-            zf = zipfile.ZipFile(fqcfile)
-            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
-                ft = TextIOWrapper(f)
-                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
-                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
-        with self.output()[2].open('w') as outfile:
-            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
-        pathlib.Path(self.output()[0].path).touch()
 
 # per sample subtasks
 @requires(mergeSampleFASTQs)
@@ -309,7 +281,33 @@ class processTranscriptomicSamples(luigi.Task):
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
+
+# Merging sample to project tasks
+## QC
+@requires(processTranscriptomicSamples)
+class mergeQualityChecks(luigi.Task):
+    """
+    Runs fastqc on all samples and makes an overall summary
+    """
+    def run(self):
+        import zipfile
+        from io import TextIOWrapper
         
+        qclines = []
+        for fqcfile in glob.glob(os.path.join(self.input()[1].path+'*/*.zip')):
+            zf = zipfile.ZipFile(fqcfile)
+            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
+                ft = TextIOWrapper(f)
+                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
+                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
+        with self.output().open('w') as outfile:
+            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
+
+    def output(self):
+        return luigi.LocalTarget(
+            '{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project)
+        )
+
 @requires(processTranscriptomicSamples)
 class mergeAlignResults(luigi.Task):
     """
@@ -493,9 +491,8 @@ class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        #yield self.clone(mergeFASTQs)
-        #yield self.clone(qualityCheck)
         yield self.clone(processTranscriptomicSamples)
+        yield self.clone(mergeQualityChecks)
         yield self.clone(mergeAlignResults)
         yield self.clone(PCAplotCounts)
         if self.design: yield self.clone(diffexpTask)
