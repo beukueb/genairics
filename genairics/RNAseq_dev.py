@@ -276,12 +276,14 @@ class processTranscriptomicSampleTask(luigi.Task):
         return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
     
     def run(self):
-        self.clone(setupSequencedSample).run()
-        self.clone(mergeSampleFASTQs).run()
-        self.clone(sampleQualityCheck).run()
-        self.clone(cutadaptSampleTask).run()
-        self.clone(STARsample).run()
-        self.clone(RSEMsample).run()
+        #yield subtasks; if completed will go to next subtask
+        yield self.clone(setupSequencedSample)
+        yield self.clone(mergeSampleFASTQs)
+        yield self.clone(sampleQualityCheck)
+        yield self.clone(cutadaptSampleTask)
+        yield self.clone(STARsample)
+        yield self.clone(RSEMsample)
+        
         pathlib.Path(self.output().path).touch()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
@@ -307,15 +309,15 @@ class processTranscriptomicSamples(luigi.Task):
         # Make output directory
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
-        # Run the sample subtasks
+        # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            processTranscriptomicSampleTask( #OPTIONAL future implement with yield
+            yield processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
-                pairedEnd = self.pairedEnd, #TODO restructure setupSequencedSample for more sensible variable names
-                outfileDir = os.path.join(self.output()[1].path,sample), #optionally in future first to temp location
+                pairedEnd = self.pairedEnd,
+                outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            ).run()
+            )
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
