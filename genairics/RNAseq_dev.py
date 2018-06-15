@@ -311,15 +311,16 @@ class processTranscriptomicSamples(luigi.Task):
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
+        tasks = []
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            yield processTranscriptomicSampleTask(
+            tasks.append( processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            )
-        
+            ))
+        yield tasks
         # Check point
         pathlib.Path(self.output()[0].path).touch()
         
