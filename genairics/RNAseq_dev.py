@@ -77,37 +77,32 @@ class cutadaptSampleTask(luigi.Task):
     def requires(self):
         return self.clone(mergeSampleFASTQs)
         
-    def output(self):
-        return LuigiLocalTargetAttribute(
-            self.input()[0].path, self.task_family, 'done'
-        )
-        #return luigi.LocalTarget(
-        #    os.path.join(
-        #        self.outfileDir,
-        #        '.completed_{}'.format(self.task_family)
-        #        if self.removeUntrimmedFile or not self.trimReads
-        #        else 'untrimmed.fq.gz'
-        #    )
-        #)
-        
     def run(self):
         if self.trimReads:
             import shutil
-            untrimmed1 = os.path.join(
-                self.outfileDir,
-                os.path.basename(self.input()[0].path).replace('.fastq.gz','_untrimmed.fastq.gz')
-            )
-            shutil.move(self.input()[0].path,untrimmed1)
-            stdout = local['cutadapt'](
-                '--cores', config.threads,
-                *(self.cutadaptCLIargs.split()),
-                '-o', self.output().path, #is actually output file here (overwriting original infile1)
-                untrimmed1
-            )
-            if stdout: logger.info(stdout)
-            if self.removeUntrimmedFile: os.unlink(untrimmed1)
+            for inputfile in self.input():
+                untrimmed = os.path.join(
+                    self.outfileDir,
+                    os.path.basename(inputfile.path).replace('.fastq.gz','_untrimmed.fastq.gz')
+                )
+                shutil.move(inputfile.path,untrimmed)
+                stdout = local['cutadapt'](
+                    '--cores', config.threads,
+                    *(self.cutadaptCLIargs.split()),
+                    '-o', inputfile.path, #is actually output file here (overwriting original infile)
+                    untrimmed
+                )
+                if stdout: logger.info(stdout)
+                if self.removeUntrimmedFile: os.unlink(untrimmed)
+                
         if self.output().pathExists(): self.output().touch()
 
+    def output(self):
+        # only first read or single read fastq marked complete
+        return LuigiLocalTargetAttribute(
+            self.input()[0].path, self.task_family, 'done'
+        )
+        
 ## STAR aligning
 @inherits(cutadaptConfig)
 @inherits(STARandRSEMindex)
