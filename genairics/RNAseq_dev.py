@@ -150,6 +150,7 @@ class STARsample(luigi.Task):
                 species=self.genome,release=self.release),
             '--readFilesIn', self.input()[0].path,
             *((self.input()[1].path,) if self.pairedEnd else ()),
+            *(('--outFilterScoreMinOverLread', 0.3, '--outFilterMatchNminOverLread', 0.3) if self.pairedEnd else ())
 	    '--readFilesCommand', self.readFilesCommand,
 	    '--outFileNamePrefix', os.path.join(self.outfileDir,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
