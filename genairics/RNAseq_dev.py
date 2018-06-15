@@ -267,25 +267,25 @@ class RSEMsample(luigi.Task):
 
 # the sample pipeline can inherit and clone the sample subtasks directly
 @inherits(RSEMsample)
-class processTranscriptomicSampleTask(luigi.WrapperTask):#luigi.Task):
+class processTranscriptomicSampleTask(luigi.Task):
     """
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
     
-    def requires(self):
+    def run(self):
         #yield subtasks; if completed will go to next subtask
-        yield self.clone(setupSequencedSample)
-        yield self.clone(mergeSampleFASTQs)
-        yield self.clone(sampleQualityCheck)
-        yield self.clone(cutadaptSampleTask)
-        yield self.clone(STARsample)
-        yield self.clone(RSEMsample)
-    #def run(self):        
-    #    pathlib.Path(self.output().path).touch()
+        self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(sampleQualityCheck).run()
+        self.clone(cutadaptSampleTask).run()
+        self.clone(STARsample).run()
+        self.clone(RSEMsample).run()
 
-    #def output(self):
-    #    return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+        pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
 
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(setupProject)
