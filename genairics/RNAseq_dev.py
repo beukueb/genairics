@@ -272,10 +272,8 @@ class processTranscriptomicSampleTask(luigi.Task):
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
-    def output(self):
-        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
     
-    def run(self):
+    def requires(self):
         #yield subtasks; if completed will go to next subtask
         yield self.clone(setupSequencedSample)
         yield self.clone(mergeSampleFASTQs)
@@ -283,8 +281,11 @@ class processTranscriptomicSampleTask(luigi.Task):
         yield self.clone(cutadaptSampleTask)
         yield self.clone(STARsample)
         yield self.clone(RSEMsample)
-        
+    def run(self):        
         pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
 
 # the all samples pipeline needs to inherit the sample pipeline configs
 @inherits(setupProject)
@@ -312,12 +313,12 @@ class processTranscriptomicSamples(luigi.Task):
         # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            processTranscriptomicSampleTask(
+            yield processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            ).run()
+            )
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
