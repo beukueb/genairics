@@ -75,7 +75,7 @@ def prepareParser():
             if type(param._default) in typeMapping.values():
                 if typeMapping[type(param)] is bool: #CLI flag
                     subparser.add_argument(
-                        '--'+paran, action='store_true' if param._default else 'store_false',
+                        '--'+paran, action='store_false' if param._default else 'store_true',
                         help=param.description+' (no argument needed)'
                     )
                 else: #CLI argument with value
