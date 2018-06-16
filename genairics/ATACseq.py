@@ -254,8 +254,6 @@ class ATACseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(mergeFASTQs)
-        yield self.clone(qualityCheck)
         yield self.clone(processATACsamplesTask)
         yield self.clone(SamBedFilteringTask)
         yield self.clone(PeakCallingTask)
