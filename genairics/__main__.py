@@ -73,8 +73,16 @@ def prepareParser():
         subparser.set_defaults(function=pipelines[pipeline])
         for paran,param in pipelines[pipeline].get_params():
             if type(param._default) in typeMapping.values():
-                subparser.add_argument('--'+paran, default=param._default, type=typeMapping[type(param)],
-                                       help=param.description)
+                if typeMapping[type(param)] is bool: #CLI flag
+                    subparser.add_argument(
+                        '--'+paran, action='store_true' if param._default else 'store_false',
+                        help=param.description+' (no argument needed)'
+                    )
+                else: #CLI argument with value
+                    subparser.add_argument(
+                        '--'+paran, default=param._default,
+                        type=typeMapping[type(param)], help=param.description
+                    )
             else: subparser.add_argument(paran, type=typeMapping[type(param)], help=param.description)
 
     # Console option
