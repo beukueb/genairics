@@ -268,12 +268,13 @@ class processTranscriptomicSamples(luigi.Task):
         tasks = []
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
-            processTranscriptomicSampleTask(
+            pTSTask = processTranscriptomicSampleTask(
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
-            ).run()
+            )
+            if not pTSTask.complete(): pTSTask.run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
