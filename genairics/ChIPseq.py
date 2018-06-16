@@ -18,8 +18,38 @@ import logging
 from genairics import config, logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
 from genairics.resources import resourcedir, RetrieveGenome, Bowtie2Index, RetrieveBlacklist
-from genairics.RNAseq import qualityCheck
 
+@inherits(mergeFASTQs)
+class qualityCheck(luigi.Task):
+    """
+    Runs fastqc on all samples and makes an overall summary
+    """
+    def requires(self):
+        return self.clone_parent()
+        
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/QCresults'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project))
+        )
+
+    def run(self):
+        import zipfile
+        from io import TextIOWrapper
+        
+        local[gscripts % 'qualitycheck.sh'](self.project, self.datadir)
+        qclines = []
+        for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
+            zf = zipfile.ZipFile(fqcfile)
+            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
+                ft = TextIOWrapper(f)
+                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
+                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
+        with self.output()[2].open('w') as outfile:
+            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
+        pathlib.Path(self.output()[0].path).touch()
+        
 ### ChIP specific Task
 class cutadaptConfig(luigi.Config):
     """

@@ -15,7 +15,7 @@ import logging
 from genairics import config, logger, gscripts, setupProject
 from genairics.datasources import BaseSpaceSource, mergeFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex, RetrieveBlacklist
-from genairics.RNAseq import qualityCheck
+from genairics.ChIPseq import qualityCheck
 
 ### ATAC specific Tasks
 class alignSTARconfig(luigi.Config):
