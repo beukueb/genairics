@@ -77,7 +77,6 @@ class processATACsampleTask(luigi.Task):
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
-    
     def run(self):
         #yield subtasks; if completed will go to next subtask
         self.clone(setupSequencedSample).run()
@@ -121,14 +120,14 @@ class processATACsamplesTask(luigi.Task):
         # Run the sample subtasks
         for fastqdir in glob.glob(os.path.join(self.datadir,self.project,'*')):
             sample = os.path.basename(fastqdir)
-            aASTask = alignATACsampleTask( #OPTIONAL future implement with yield
+            pASTask = processATACsampleTask( #OPTIONAL future implement with yield
                 sampleDir = fastqdir,
                 pairedEnd = self.pairedEnd,
                 outfileDir = os.path.join(self.output()[1].path,sample),
                 genomeDir=self.input()['genome'][0].path,
                 **{k:self.param_kwargs[k] for k in alignSTARconfig.get_param_names()}
             )
-            if not aASTask.complete(): aASTask.run()
+            if not pASTask.complete(): pASTask.run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
