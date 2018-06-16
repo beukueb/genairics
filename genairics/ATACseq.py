@@ -50,7 +50,7 @@ class alignATACsampleTask(luigi.Task):
         return self.clone(mergeSampleFASTQs)
     
     def run(self):
-        os.mkdir(self.outFileNamePrefix)
+        os.mkdir(self.output().path)
         stdout = local['STAR'](
             '--runThreadN', self.runThreadN,
             '--runMode', self.runMode,
