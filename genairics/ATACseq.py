@@ -12,12 +12,14 @@ import pandas as pd
 import logging
 
 ## Tasks
-from genairics import config, logger, gscripts, setupProject
-from genairics.datasources import BaseSpaceSource, mergeFASTQs
+from genairics import config, logger, gscripts, setupProject, setupSequencedSample
+from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex, RetrieveBlacklist
-from genairics.ChIPseq import qualityCheck
 
-### ATAC specific Tasks
+### per sample subtasks
+from genairics.RNAseq import sampleQualityCheck, cutadaptConfig, cutadaptSampleTask
+
+@inherits(cutadaptConfig)
 class alignSTARconfig(luigi.Config):
     """
     Contains global STAR parameters that should be configurable by the end user.
@@ -36,78 +38,102 @@ class alignSTARconfig(luigi.Config):
     outWigNorm = luigi.Parameter("RPM")
     
 @inherits(alignSTARconfig)
+@inherits(mergeSampleFASTQs)
 class alignATACsampleTask(luigi.Task):
     """
     The task to process one sample.
     Intended to be called from a project task that contains all samples needed to be processed.
     """
     genomeDir = luigi.Parameter(description='genome dir')
-    readFilesIn = luigi.Parameter(description='fastqfile(s)')
-    outFileNamePrefix = luigi.Parameter(description='result destination')
 
-    def output(self):
-        return luigi.LocalTarget(self.outFileNamePrefix)
-
+    def requires(self):
+        return self.clone(mergeSampleFASTQs)
+    
     def run(self):
         os.mkdir(self.outFileNamePrefix)
         stdout = local['STAR'](
             '--runThreadN', self.runThreadN,
             '--runMode', self.runMode,
             '--genomeDir', self.genomeDir,
-            '--readFilesIn', self.readFilesIn,
+            '--readFilesIn', self.input()[0].path,
+            *((self.input()[1].path,) if self.pairedEnd else ()),
+            *(('--outFilterScoreMinOverLread', 0.3, '--outFilterMatchNminOverLread', 0.3) if self.pairedEnd else ()),
             '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', self.outFileNamePrefix,
+	    '--outFileNamePrefix', self.output().path,
 	    '--outSAMtype', self.outSAMtype.split()[0], self.outSAMtype.split()[1],
 	    '--alignIntronMax', self.alignIntronMax,
 	    '--outWigType', self.outWigType,
             '--outWigNorm', self.outWigNorm
         )
         logger.info('%s output:\n%s',self.task_family,stdout)
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.outfileDir,'./'))
+
+# the sample pipeline can inherit and clone the last independent sample subtask[s] directly
+@inherits(alignATACsampleTask)
+class processATACsampleTask(luigi.Task):
+    """
+    This wrappers makes sure all the individuel sample tasks get run.
+    Each task should be idempotent to avoid issues.
+    """
     
-@inherits(mergeFASTQs)
+    def run(self):
+        #yield subtasks; if completed will go to next subtask
+        self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(sampleQualityCheck).run()
+        self.clone(cutadaptSampleTask).run()
+        self.clone(alignATACsampleTask).run()
+
+        pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+    
+@inherits(setupProject)
 @inherits(alignSTARconfig)    
 @inherits(STARandRSEMindex)
-class alignATACsamplesTask(luigi.Task):
+class processATACsamplesTask(luigi.Task):
     """
     Align reads to genome with STAR
-    TODO pairedEnd processing not implemented yet
     """
-    pairedEnd = luigi.BoolParameter(default=False,
-                                    description='paired end sequencing reads')
+    pairedEnd = luigi.BoolParameter(
+        default=False,
+        description='paired end sequencing reads'
+    )
     
     def requires(self):
         return {
             'genome':self.clone(STARandRSEMindex), #OPTIONAL use genome index only instead of the RSEM build transcriptome index
-            'fastqs':self.clone(mergeFASTQs)
         }
 
     def output(self):
         return (
             luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/alignmentResults'.format(self.resultsdir,self.project)),
+            luigi.LocalTarget('{}/{}/sampleResults'.format(self.resultsdir,self.project)),
         )
 
     def run(self):
-        if self.pairedEnd: raise NotImplementedError('paired end not yet implemented')
-        
         # Make output directory
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks
-        for fastqfile in glob.glob(os.path.join(self.datadir,self.project,'*.fastq.gz')):
-            sample = os.path.basename(fastqfile).replace('.fastq.gz','')
-            alignATACsampleTask( #OPTIONAL future implement with yield
+        for fastqdir in glob.glob(os.path.join(self.datadir,self.project,'*')):
+            sample = os.path.basename(fastqdir)
+            aASTask = alignATACsampleTask( #OPTIONAL future implement with yield
+                sampleDir = fastqdir,
+                pairedEnd = self.pairedEnd,
+                outfileDir = os.path.join(self.output()[1].path,sample),
                 genomeDir=self.input()['genome'][0].path,
-                readFilesIn=fastqfile,
-                outFileNamePrefix=os.path.join(self.output()[1].path,sample+'/'),
-                #optionally in future first to temp location
                 **{k:self.param_kwargs[k] for k in alignSTARconfig.get_param_names()}
-            ).run()
+            )
+            if not aASTask.complete(): aASTask.run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
 
-@requires(alignATACsamplesTask)
+@requires(processATACsamplesTask)
 class SamBedFilteringTask(luigi.Task):
     """
     Filtering mapped reads on quality and optionally on blacklisted genomic regions 
@@ -230,6 +256,6 @@ class ATACseq(luigi.WrapperTask):
         yield self.clone(BaseSpaceSource)
         yield self.clone(mergeFASTQs)
         yield self.clone(qualityCheck)
-        yield self.clone(alignATACsamplesTask)
+        yield self.clone(processATACsamplesTask)
         yield self.clone(SamBedFilteringTask)
         yield self.clone(PeakCallingTask)

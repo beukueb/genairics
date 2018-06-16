@@ -140,9 +140,6 @@ class STARsample(luigi.Task):
     def requires(self):
         return self.clone(mergeSampleFASTQs)
 
-    def output(self):
-        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
-        
     def run(self):
         stdout = local['STAR'](
             '--runThreadN', config.threads,
@@ -172,6 +169,9 @@ class STARsample(luigi.Task):
         # Check point
         pathlib.Path(self.output().path).touch()
 
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+        
 ## RSEM counting
 @inherits(STARconfig)
 class RSEMconfig(luigi.Config):
@@ -265,7 +265,6 @@ class processTranscriptomicSamples(luigi.Task):
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
         # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
-        tasks = []
         for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
             sample = os.path.basename(fastqdir)
             pTSTask = processTranscriptomicSampleTask(
