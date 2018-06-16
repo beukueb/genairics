@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-#PBS -N RNAseqPipeline
-#PBS -l nodes=1:ppn=16
-#PBS -l walltime=72:00:00
-#PBS -m be
 """
 Full pipeline starting from BaseSpace fastq project
 """
@@ -10,6 +6,7 @@ from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits, requires
+from genairics import LuigiLocalTargetAttribute
 from plumbum import local, colors
 import pandas as pd
 import logging
@@ -21,42 +18,93 @@ import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import logger, config, gscripts, setupProject, setupSequencedSample
-from genairics.datasources import BaseSpaceSource, mergeFASTQs
+from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
-@inherits(mergeFASTQs)
-class qualityCheck(luigi.Task):
+# per sample subtasks
+@requires(mergeSampleFASTQs)
+class sampleQualityCheck(luigi.Task):
+    """Check the quality of a single sample
+
+    Uses fastqc.
     """
-    Runs fastqc on all samples and makes an overall summary
-    """
-    def requires(self):
-        return self.clone_parent()
-        
     def output(self):
-        return (
-            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/QCresults'.format(self.resultsdir,self.project)),
-            luigi.LocalTarget('{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project))
-        )
+        return luigi.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
 
     def run(self):
-        import zipfile
-        from io import TextIOWrapper
-        
-        local[gscripts % 'qualitycheck.sh'](self.project, self.datadir)
-        qclines = []
-        for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
-            zf = zipfile.ZipFile(fqcfile)
-            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
-                ft = TextIOWrapper(f)
-                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
-                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
-        with self.output()[2].open('w') as outfile:
-            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
-        pathlib.Path(self.output()[0].path).touch()
+        tmpdir = self.output().path+'_tmp'
+        os.mkdir(tmpdir)
+        stdout = local['fastqc'](
+            '-o', tmpdir,
+            '-t', config.threads,
+            self.input()[0].path,
+            *((self.input()[1].path,) if self.pairedEnd else ())
+        )
+        os.rename(tmpdir,self.output().path)
 
-# per sample subtasks
+## read quality trimming
+class cutadaptConfig(luigi.Config):
+    """
+    Info: http://cutadapt.readthedocs.io/en/stable/guide.html
+    """
+    trimReads = luigi.BoolParameter(
+        default = False,
+        description = "trim the reads using cutadapt"
+    )
+    removeUntrimmedFile = luigi.BoolParameter(
+        default = False,
+        description = "remove the original untrimmed fastq"
+    )
+    cutadaptCLIargs = luigi.Parameter(
+        default = "-q 20 -m 30",
+        description = """Include all the arguments for cutadapt here, 
+        except for input and output related files.
+        If running on the command line, do not forget to inclose with quotes.
+        """
+    )
+
+@inherits(cutadaptConfig)
+@inherits(mergeSampleFASTQs)
+class cutadaptSampleTask(luigi.Task):
+    """Apply cutadapt to sample
+
+    Currently a CLI configuration string needs to be provided,
+    allowing as flexible a use as possible. You may need to look
+    into the cutadapt documentation to know which arguments to provide.
+
+    TODO implement for paired end
+    """
+    def requires(self):
+        return self.clone(mergeSampleFASTQs)
+        
+    def run(self):
+        if self.trimReads:
+            import shutil
+            for inputfile in self.input():
+                untrimmed = os.path.join(
+                    self.outfileDir,
+                    os.path.basename(inputfile.path).replace('.fastq.gz','_untrimmed.fastq.gz')
+                )
+                shutil.move(inputfile.path,untrimmed)
+                stdout = local['cutadapt'](
+                    '--cores', config.threads,
+                    *(self.cutadaptCLIargs.split()),
+                    '-o', inputfile.path, #is actually output file here (overwriting original infile)
+                    untrimmed
+                )
+                if stdout: logger.info(stdout)
+                if self.removeUntrimmedFile: os.unlink(untrimmed)
+                
+        if self.output().pathExists(): self.output().touch()
+
+    def output(self):
+        # only first read or single read fastq marked complete
+        return LuigiLocalTargetAttribute(
+            self.input()[0].path, self.task_family, 'done'
+        )
+        
 ## STAR aligning
+@inherits(cutadaptConfig)
 @inherits(STARandRSEMindex)
 class STARconfig(luigi.Config):
     """
@@ -73,40 +121,24 @@ class STARconfig(luigi.Config):
     quantMode = luigi.Parameter(
         default='TranscriptomeSAM GeneCounts',
         description='STAR quantMode parameter (can contain more than one argument separated by 1 space)'
-    )    
+    )
+    removeFASTQs = luigi.BoolParameter(
+        default = True,
+        description = 'The merged FASTQs are removed after mapping.'
+    )
+    samstat = luigi.BoolParameter(
+        default = True,
+        description = 'Run samstat on transcriptome bam file.'
+    )
 
 @inherits(STARconfig)
-@inherits(setupSequencedSample)
+@inherits(mergeSampleFASTQs)
 class STARsample(luigi.Task):
     """
     Task that does the STAR alignment
-
-    Currently fq's not moved first to tmp dir TODO
-    Previous implementation that did that in the bash script:
-    #Prepare workdir
-    if [ "$PBS_JOBID" ]; then
-    cd $TMPDIR
-    if [ -d fastqs ]; then
-	# if quality check ran previously on same node, fastqs will already be present
-	mkdir alignmentResults
-    else
-	mkdir {fastqs,alignmentResults}
-	cp $datadir/$project/*.fastq.gz fastqs/
-    fi
-    outdir=$TMPDIR/alignmentResults
-    else
-    cd $datadir/../results/$project/
-    mkdir alignmentResults
-    outdir=$datadir/../results/$project/alignmentResults
-    fi
-
-    at the end tmp results were moved to final destination:
-    if [ "$PBS_JOBID" ]; then
-    mv $TMPDIR/alignmentResults $datadir/../results/${project}/alignmentResults${suffix}
-    fi
     """
     def requires(self):
-        return self.clone(setupSequencedSample)
+        return self.clone(mergeSampleFASTQs)
 
     def output(self):
         return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
@@ -116,14 +148,27 @@ class STARsample(luigi.Task):
             '--runThreadN', config.threads,
             '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
                 species=self.genome,release=self.release),
-            '--readFilesIn', self.infile1, *((self.infile2,) if self.infile2 else ()), 
+            '--readFilesIn', self.input()[0].path,
+            *((self.input()[1].path,) if self.pairedEnd else ()),
+            *(('--outFilterScoreMinOverLread', 0.3, '--outFilterMatchNminOverLread', 0.3) if self.pairedEnd else ()),
 	    '--readFilesCommand', self.readFilesCommand,
-	    '--outFileNamePrefix', os.path.join(self.input().path,'./'),
+	    '--outFileNamePrefix', os.path.join(self.outfileDir,'./'),
 	    '--outSAMtype', *self.outSAMtype.split(' '),
 	    '--quantMode', *self.quantMode.split(' ')
         )
         if stdout: logger.info('%s output:\n%s',self.task_family,stdout)
 
+        # Remove processed FASTQs
+        if self.removeFASTQs:
+            os.unlink(self.input()[0].path)
+            if self.pairedEnd: os.unlink(self.input()[1].path)
+
+        # Samstat
+        if self.samstat:
+            stdout = local['samstat'](
+                os.path.join(self.outfileDir,'Aligned.toTranscriptome.out.bam')
+            )
+        
         # Check point
         pathlib.Path(self.output().path).touch()
 
@@ -162,7 +207,7 @@ class RSEMsample(luigi.Task):
     def run(self):
         stdout = local['rsem-calculate-expression'](
             '-p', config.threads, '--alignments',
-            *(('--paired-end',) if self.infile2 else ()),
+            *(('--paired-end',) if self.pairedEnd else ()),
             '--forward-prob', self.forwardprob,
             os.path.join(self.input()[0].path,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
@@ -181,28 +226,33 @@ class processTranscriptomicSampleTask(luigi.Task):
     This wrappers makes sure all the individuel sample tasks get run.
     Each task should be idempotent to avoid issues.
     """
-    def output(self):
-        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
     
     def run(self):
+        #yield subtasks; if completed will go to next subtask
         self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(sampleQualityCheck).run()
+        self.clone(cutadaptSampleTask).run()
         self.clone(STARsample).run()
         self.clone(RSEMsample).run()
+
         pathlib.Path(self.output().path).touch()
 
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+
 # the all samples pipeline needs to inherit the sample pipeline configs
-@inherits(mergeFASTQs)
+@inherits(setupProject)
 @inherits(RSEMconfig)    
 class processTranscriptomicSamples(luigi.Task):
     """
     Process transciptomic samples for RNAseq with STAR aligner
     """
+    pairedEnd = luigi.BoolParameter(
+        default=False,
+        description='paired end sequencing reads'
+    )
     suffix = luigi.Parameter(default='',description='use when preparing for xenome filtering')
-
-    def requires(self):
-        return {
-            'fastqs':self.clone(mergeFASTQs)
-        }
 
     def output(self):
         return (
@@ -214,22 +264,46 @@ class processTranscriptomicSamples(luigi.Task):
         # Make output directory
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
 
-        # Run the sample subtasks
-        for fastqfile in glob.glob(os.path.join(
-                self.datadir,self.project,
-                '*_R1.fastq.gz' if self.pairedEnd else '*.fastq.gz')
-        ):
-            sample = os.path.basename(fastqfile).replace('.fastq.gz','')
-            processTranscriptomicSampleTask( #OPTIONAL future implement with yield
-                infile1 = fastqfile,
-                infile2 = fastqfile.replace('_R1.','_R2.') if self.pairedEnd else '',
-                outfileDir = os.path.join(self.output()[1].path,sample), #optionally in future first to temp location
+        # Run the sample subtasks. Optionally in future yield list of the sample tasks to process in parallel
+        tasks = []
+        for fastqdir in glob.glob(os.path.join(self.datadir, self.project, '*')):
+            sample = os.path.basename(fastqdir)
+            processTranscriptomicSampleTask(
+                sampleDir = fastqdir,
+                pairedEnd = self.pairedEnd,
+                outfileDir = os.path.join(self.output()[1].path,sample),
                 **{k:self.param_kwargs[k] for k in RSEMconfig.get_param_names()}
             ).run()
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
+
+# Merging sample to project tasks
+## QC
+@requires(processTranscriptomicSamples)
+class mergeQualityChecks(luigi.Task):
+    """
+    Runs fastqc on all samples and makes an overall summary
+    """
+    def run(self):
+        import zipfile
+        from io import TextIOWrapper
         
+        qclines = []
+        for fqcfile in glob.glob(os.path.join(self.input()[1].path+'*/*.zip')):
+            zf = zipfile.ZipFile(fqcfile)
+            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
+                ft = TextIOWrapper(f)
+                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
+                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
+        with self.output().open('w') as outfile:
+            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
+
+    def output(self):
+        return luigi.LocalTarget(
+            '{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project)
+        )
+
 @requires(processTranscriptomicSamples)
 class mergeAlignResults(luigi.Task):
     """
@@ -413,9 +487,8 @@ class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(mergeFASTQs)
-        yield self.clone(qualityCheck)
         yield self.clone(processTranscriptomicSamples)
+        yield self.clone(mergeQualityChecks)
         yield self.clone(mergeAlignResults)
         yield self.clone(PCAplotCounts)
         if self.design: yield self.clone(diffexpTask)

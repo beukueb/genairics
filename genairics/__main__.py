@@ -13,14 +13,11 @@ def prepareParser():
     from genairics import typeMapping
     from genairics.jobs import QueuJob
     from genairics.RNAseq import RNAseq
-    #RNAseq_dev temporary until confident about working improved pipeline
-    from genairics.RNAseq_dev import RNAseq as RNAseq_dev
     from genairics.ChIPseq import ChIPseq
     from genairics.ATACseq import ATACseq
 
     pipelines = OrderedDict((
         ('RNAseq',RNAseq),
-        ('RNAseq_dev',RNAseq_dev), #temp dev pipeline
         ('ChIPseq',ChIPseq),
         ('ATACseq',ATACseq)
     ))
