@@ -12,7 +12,7 @@ import pandas as pd
 import logging
 
 ## Tasks
-from genairics import config, logger, gscripts, setupProject, setupSequencedSample
+from genairics import config, logger, gscripts, setupProject, setupSequencedSample, processSamplesIndividually
 from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex, RetrieveBlacklist
 
@@ -254,7 +254,9 @@ class ATACseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(processATACsamplesTask)
+        yield processSamplesIndividually(
+            self.clone(processATACsamplesTask)
+        )
         yield self.clone(SamBedFilteringTask)
         yield self.clone(PeakCallingTask)
         yield self.clone(mergeQualityChecks)

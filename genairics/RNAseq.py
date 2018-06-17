@@ -18,7 +18,7 @@ matplotlib.use('SVG')
 import matplotlib.pyplot as plt
 
 ## Tasks
-from genairics import logger, config, gscripts, setupProject, setupSequencedSample
+from genairics import logger, config, gscripts, setupProject, setupSequencedSample, processSamplesIndividually
 from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, STARandRSEMindex
 
@@ -295,7 +295,7 @@ class processTranscriptomicSamples(luigi.Task):
 
 # Merging sample to project tasks
 ## QC - requires only setupProject so that other pipelines can also use
-@requires(setupProject)
+@requires(processSamplesIndividually)
 class mergeQualityChecks(luigi.Task):
     """
     Runs fastqc on all samples and makes an overall summary
@@ -514,7 +514,9 @@ class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(processTranscriptomicSamples)
+        yield processSamplesIndividually(
+            self.clone(processTranscriptomicSamples)
+        )
         yield self.clone(mergeQualityChecks)
         yield self.clone(mergeAlignResults)
         yield self.clone(PCAplotCounts)

@@ -240,6 +240,35 @@ class setupSequencedSample(luigi.Task):
     def run(self):
         if not self.output().exists(): os.mkdir(self.output().path)
 
+#@inherits(setupProject)
+class processSamplesIndividually(luigi.Task):
+    """Requires as parameter the wrapper task for the
+    specific pipeline that includes all tasks that need
+    to be performed for all samples individually.
+    Tasks that merge individual sample results need
+    to require this task and need to inherit from setupProject
+    as setupProject parameters are used in processSamplesIndividually
+    through the requiredSampleTask.
+    """
+    requiredSampleTask = luigi.TaskParameter(
+        description = "the wrapper task that will handle execution of processing all samples individually"
+    )
+
+    def requires(self):
+        return self.requiredSampleTask
+
+    def run(self):
+        pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget(
+            os.path.join(
+                self.requiredSampleTask.resultsdir,
+                self.requiredSampleTask.project,
+                'plumbing/completed_{}'.format(self.task_family)
+            )
+        )
+    
 # genairic (non-luigi) directed workflow runs
 def runTaskAndDependencies(task):
     #TODO -> recursive function for running workflow, check luigi alternative first
