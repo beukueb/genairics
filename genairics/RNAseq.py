@@ -279,8 +279,8 @@ class processTranscriptomicSamples(luigi.Task):
         pathlib.Path(self.output()[0].path).touch()
 
 # Merging sample to project tasks
-## QC
-@requires(processTranscriptomicSamples)
+## QC - requires only setupProject so that other pipelines can also use
+@requires(setupProject)
 class mergeQualityChecks(luigi.Task):
     """
     Runs fastqc on all samples and makes an overall summary
@@ -288,9 +288,21 @@ class mergeQualityChecks(luigi.Task):
     def run(self):
         import zipfile
         from io import TextIOWrapper
+
+        qczips = glob.glob(os.path.join(self.input()[0].path+'*/*.zip'))
+        if not qczips:
+            raise Exception(
+                """No quality control output.
+                Check that the task that runs before finished correctly.
+                To be able to use this merge task in different pipelines,
+                it only inherits setupProject, it therefore does not require
+                completeness of the previous task to run. This should be taken
+                care of by the the wrapper task.
+                """
+            )
         
         qclines = []
-        for fqcfile in glob.glob(os.path.join(self.input()[1].path+'*/*.zip')):
+        for fqcfile in qczips:
             zf = zipfile.ZipFile(fqcfile)
             with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
                 ft = TextIOWrapper(f)

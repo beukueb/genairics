@@ -245,7 +245,9 @@ class PeakCallingTask(luigi.Task):
 
         # Check point
         pathlib.Path(self.output()[0].path).touch()
-    
+
+from genairics.RNAseq import mergeQualityChecks
+
 @inherits(BaseSpaceSource)
 @inherits(PeakCallingTask)
 class ATACseq(luigi.WrapperTask):
@@ -255,3 +257,4 @@ class ATACseq(luigi.WrapperTask):
         yield self.clone(processATACsamplesTask)
         yield self.clone(SamBedFilteringTask)
         yield self.clone(PeakCallingTask)
+        yield self.clone(mergeQualityChecks)
