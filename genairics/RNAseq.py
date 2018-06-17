@@ -304,7 +304,9 @@ class mergeQualityChecks(luigi.Task):
         import zipfile
         from io import TextIOWrapper
 
-        qczips = glob.glob(os.path.join(self.input()[0].path,'sampleResults/*/QCresults/*.zip'))
+        qczips = glob.glob(
+            os.path.join(self.requiredSampleTask.input()[0].path,'sampleResults/*/QCresults/*.zip')
+        )
         if not qczips:
             raise Exception(
                 """No quality control output.
@@ -328,7 +330,10 @@ class mergeQualityChecks(luigi.Task):
 
     def output(self):
         return luigi.LocalTarget(
-            '{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project)
+            '{}/{}/summaries/qcsummary.csv'.format(
+                self.requiredSampleTask.resultsdir,
+                self.requiredSampleTask.project
+            )
         )
 
 @requires(processTranscriptomicSamples)
@@ -514,10 +519,9 @@ class RNAseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield processSamplesIndividually(
-            requiredSampleTask = self.clone(processTranscriptomicSamples)
-        )
-        yield self.clone(mergeQualityChecks)
+        sampleTask = self.clone(processTranscriptomicSamples)
+        yield processSamplesIndividually(requiredSampleTask = sampleTask)
+        yield mergeQualityChecks(requiredSampleTask = sampleTask)
         yield self.clone(mergeAlignResults)
         yield self.clone(PCAplotCounts)
         if self.design: yield self.clone(diffexpTask)
