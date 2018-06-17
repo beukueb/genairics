@@ -1,8 +1,8 @@
-#!/usr/bin/env python
-"""
-ATAC sequencing pipeline starting from BaseSpace fastq project
-"""
+#-*- coding: utf-8 -*-
+"""ATAC sequencing pipeline starting from BaseSpace fastq project
 
+For help on settings run `genairics ATACseq -h`
+"""
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask

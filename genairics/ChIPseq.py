@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-"""
-ChIP sequencing pipeline starting from BaseSpace fastq project
+#-*- coding: utf-8 -*-
+"""Chip sequencing pipeline starting from BaseSpace fastq project
+
+For help on settings run `genairics ChIPseq -h`
 
 References:
  - http://jvanheld.github.io/cisreg_course/chip-seq/practical/chip-seq.html
@@ -15,110 +16,41 @@ import pandas as pd
 import logging
 
 ## Tasks
-from genairics import config, logger, gscripts, setupProject
-from genairics.datasources import BaseSpaceSource, mergeFASTQs
+from genairics import config, logger, gscripts, setupProject, setupSequencedSample
+from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, RetrieveGenome, Bowtie2Index, RetrieveBlacklist
 
-@inherits(mergeFASTQs)
-class qualityCheck(luigi.Task):
-    """
-    Runs fastqc on all samples and makes an overall summary
-    """
-    def requires(self):
-        return self.clone_parent()
-        
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/QCresults'.format(self.resultsdir,self.project)),
-            luigi.LocalTarget('{}/{}/summaries/qcsummary.csv'.format(self.resultsdir,self.project))
-        )
-
-    def run(self):
-        import zipfile
-        from io import TextIOWrapper
-        
-        local[gscripts % 'qualitycheck.sh'](self.project, self.datadir)
-        qclines = []
-        for fqcfile in glob.glob(self.output()[1].path+'/*.zip'):
-            zf = zipfile.ZipFile(fqcfile)
-            with zf.open(fqcfile[fqcfile.rindex('/')+1:-4]+'/summary.txt') as f:
-                ft = TextIOWrapper(f)
-                summ = pd.read_csv(TextIOWrapper(f),sep='\t',header=None)
-                qclines.append(summ[2].ix[0]+'\t'+'\t'.join(list(summ[0]))+'\n')
-        with self.output()[2].open('w') as outfile:
-            outfile.writelines(['\t'+'\t'.join(list(summ[1]))+'\n']+qclines)
-        pathlib.Path(self.output()[0].path).touch()
-        
-### ChIP specific Task
-class cutadaptConfig(luigi.Config):
-    """
-    Info: http://cutadapt.readthedocs.io/en/stable/guide.html
-    """
-    adapter = luigi.Parameter(
-        default = "GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC",
-        description = "cutadapt adapter to trim"
-    )
-    errorRate = luigi.FloatParameter(
-        default = 0.1,
-        description = "allowed error rate => errors #/length mapping"
-    )
-    pairedEnd = luigi.BoolParameter(
-        default=False,
-        description='paired end sequencing reads (NOT IMPLEMENTED YET)'
-    )
-
-@inherits(cutadaptConfig)
-class TrimFilterSample(luigi.Task):
-    infile = luigi.Parameter()
-    outfileDir = luigi.Parameter()
-
-    def output(self):
-        return luigi.LocalTarget(os.path.join(self.outfileDir,'trimmed.fq.gz'))
-        
-    def run(self):
-        stdout = local['cutadapt'](
-            '--cores', config.threads,
-            '-a', self.adapter,
-            '-e', self.errorRate,
-            '-o', self.output().path,
-            self.infile
-        )
-        if stdout: logger.info(stdout)
+### per sample subtasks
+from genairics.RNAseq import sampleQualityCheck, cutadaptConfig, cutadaptSampleTask
 
 #subsampleTask => subsampling naar 30 miljoen indien meer
 
-@inherits(TrimFilterSample)
+@inherits(cutadaptSampleTask)
 @inherits(Bowtie2Index)
 class Bowtie2MapSample(luigi.Task):
     def requires(self):
         return {
-            'sample': self.clone(TrimFilterSample),
+            'sample': self.clone(mergeSampleFASTQs),
             'index': self.clone(Bowtie2Index)
             }
         
+    def run(self):
+        # run bowtie2 and store as bam file with mapping quality already filtered to mapQ 4
+        stdout = (local['bowtie2'].__getitem__( #need to use method __getitem__ instead of [] for arg list expansions
+            '-p', config.threads,
+            '-x', os.path.join(self.input()['index'][0].path,self.genome),
+            *(
+                ('-U', self.input()['sample'][0].path) if not self.pairedEnd else
+                ('-1', self.input()['sample'][0].path, '-2', self.input()['sample'][1].path)
+            )
+        ) | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
+        if stdout: logger.info(stdout)
+
     def output(self):
         return luigi.LocalTarget(os.path.join(self.outfileDir,'alignment.bam'))
 
-    def run(self):
-        # run bowtie2 and store as bam file with mapping quality already filtered to mapQ 4
-        stdout = (local['bowtie2'][
-            '-p', config.threads,
-            '-x', os.path.join(self.input()['index'][0].path,self.genome),
-            '-U', self.input()['sample'].path #-U -> unpaired, TODO to start using paired will be with -1 and -2
-        ] | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
-        if stdout: logger.info(stdout)
-
 @requires(Bowtie2MapSample)
 class SamProcessSample(luigi.Task):
-    def output(self):
-        return [
-            luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_sorted.bam')),
-            luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_sorted.bai')),
-            luigi.LocalTarget(os.path.join(self.outfileDir,'flagstatsummary.txt')),
-            luigi.LocalTarget(os.path.join(self.outfileDir,'idxstats.txt'))
-        ]
-
     def run(self):
         # sort output
         stdout = local['samtools']('sort', self.input().path, '-o', self.output()[0].path)
@@ -140,45 +72,44 @@ class SamProcessSample(luigi.Task):
         # log
         if stdout: logger.info(stdout)
 
+    def output(self):
+        return [
+            luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_sorted.bam')),
+            luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_sorted.bai')),
+            luigi.LocalTarget(os.path.join(self.outfileDir,'flagstatsummary.txt')),
+            luigi.LocalTarget(os.path.join(self.outfileDir,'idxstats.txt'))
+        ]
+
 @requires(SamProcessSample)
 class MakeSampleGenomeBrowserTrack(luigi.Task):
     """
     genome browser track file
     """
-    def output(self):
-        return luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_coverage.bw'))
-
     def run(self):
         stdout = local['bamCoverage']('-b', self.input()[0].path, '–outFileFormat', 'bigwig', '-o', self.output().path)
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.outfileDir,'alignment_coverage.bw'))
 
 # the sample pipeline can inherit and clone the subtasks directly
 @inherits(MakeSampleGenomeBrowserTrack)
 class processGenomicSampleTask(luigi.WrapperTask):
     def run(self):
-        self.clone(TrimFilterSample).run()
+        self.clone(setupSequencedSample).run()
+        self.clone(mergeSampleFASTQs).run()
+        self.clone(cutadaptSampleTask).run()
         self.clone(Bowtie2MapSample).run()
         self.clone(SamProcessSample).run()
         self.clone(MakeSampleGenomeBrowserTrack).run()
 
 # the all samples pipeline needs to inherit the sample pipeline configs
-@inherits(mergeFASTQs)
+@inherits(setupProject)
 @inherits(cutadaptConfig)    
 @inherits(Bowtie2Index)
 class processGenomicSamples(luigi.Task):
     """
     Process genomic samples (can be used for ChIP, ATAC, variant calling)
     """
-    def requires(self):
-        return {
-            'fastqs': self.clone(mergeFASTQs)
-        }
-
-    def output(self):
-        return (
-            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
-            luigi.LocalTarget('{}/{}/alignmentResults'.format(self.resultsdir,self.project)),
-        )
-
     def run(self):
         # Make output directory
         if not self.output()[1].exists(): os.mkdir(self.output()[1].path)
@@ -194,6 +125,12 @@ class processGenomicSamples(luigi.Task):
         
         # Check point
         pathlib.Path(self.output()[0].path).touch()
+
+    def output(self):
+        return (
+            luigi.LocalTarget('{}/{}/plumbing/completed_{}'.format(self.resultsdir,self.project,self.task_family)),
+            luigi.LocalTarget('{}/{}/alignmentResults'.format(self.resultsdir,self.project)),
+        )
 
 @requires(processGenomicSamples)
 class PeakCallingChIPsamples(luigi.Task):
@@ -271,7 +208,6 @@ class ChIPseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield self.clone(mergeFASTQs)
-        yield self.clone(qualityCheck)
         yield self.clone(processGenomicSamples)
         yield self.clone(PeakCallingChIPsamples)
+        yield self.clone(mergeQualityChecks)

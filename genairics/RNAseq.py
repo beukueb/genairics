@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-"""
-Full pipeline starting from BaseSpace fastq project
+#-*- coding: utf-8 -*-
+"""RNA sequencing pipeline starting from BaseSpace fastq project
+
+For help on settings run `genairics RNAseq -h`
 """
 from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
@@ -51,6 +52,18 @@ class cutadaptConfig(luigi.Config):
         default = False,
         description = "trim the reads using cutadapt"
     )
+    trimAdapter = luigi.BoolParameter(
+        default = False,
+        description = "trim the adapter specified by --adapter"
+    )
+    adapter = luigi.Parameter(
+        default = "GATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGC",
+        description = "cutadapt adapter to trim"
+    )
+    errorRate = luigi.FloatParameter(
+        default = 0.1,
+        description = "allowed error rate => errors #/length mapping"
+    )
     removeUntrimmedFile = luigi.BoolParameter(
         default = False,
         description = "remove the original untrimmed fastq"
@@ -88,6 +101,8 @@ class cutadaptSampleTask(luigi.Task):
                 shutil.move(inputfile.path,untrimmed)
                 stdout = local['cutadapt'](
                     '--cores', config.threads,
+                    *(('-a', self.adapter) if self.trimAdapter else ()),
+                    *(('-e', self.errorRate) if self.errorRate else ()),
                     *(self.cutadaptCLIargs.split()),
                     '-o', inputfile.path, #is actually output file here (overwriting original infile)
                     untrimmed
