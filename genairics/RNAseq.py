@@ -515,7 +515,7 @@ class RNAseq(luigi.WrapperTask):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
         yield processSamplesIndividually(
-            self.clone(processTranscriptomicSamples)
+            requiredSampleTask = self.clone(processTranscriptomicSamples)
         )
         yield self.clone(mergeQualityChecks)
         yield self.clone(mergeAlignResults)
