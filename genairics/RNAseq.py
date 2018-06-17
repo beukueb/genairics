@@ -289,7 +289,7 @@ class mergeQualityChecks(luigi.Task):
         import zipfile
         from io import TextIOWrapper
 
-        qczips = glob.glob(os.path.join(self.input()[0].path,'*/QCresults/*.zip'))
+        qczips = glob.glob(os.path.join(self.input()[0].path,'sampleResults/*/QCresults/*.zip'))
         if not qczips:
             raise Exception(
                 """No quality control output.
