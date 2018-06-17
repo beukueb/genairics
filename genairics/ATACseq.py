@@ -254,9 +254,8 @@ class ATACseq(luigi.WrapperTask):
     def requires(self):
         yield self.clone(setupProject)
         yield self.clone(BaseSpaceSource)
-        yield processSamplesIndividually(
-            requiredSampleTask = self.clone(processATACsamplesTask)
-        )
+        sampleTask = self.clone(processATACsamplesTask)
+        yield processSamplesIndividually(requiredSampleTask = sampleTask)
         yield self.clone(SamBedFilteringTask)
         yield self.clone(PeakCallingTask)
-        yield self.clone(mergeQualityChecks)
+        yield mergeQualityChecks(requiredSampleTask = sampleTask)
