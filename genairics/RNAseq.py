@@ -9,13 +9,8 @@ from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits, requires
 from genairics import LuigiLocalTargetAttribute
 from plumbum import local, colors
-import pandas as pd
+import pandas as pd, matplotlib.pyplot as plt
 import logging
-
-# matplotlib => setup for exporting svg figures only
-import matplotlib
-matplotlib.use('SVG')
-import matplotlib.pyplot as plt
 
 ## Tasks
 from genairics import logger, config, gscripts, setupProject, setupSequencedSample, processSamplesIndividually

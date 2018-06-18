@@ -16,7 +16,16 @@ def prepareParser():
     from genairics.ChIPseq import ChIPseq
     from genairics.ATACseq import ATACseq
 
-    pipelines = OrderedDict((
+    pipex = os.environ.get('GAX_PIPEX')
+    if pipex:
+        import importlib
+        pipem = importlib.import_module(pipex[:pipex.rindex('.')])
+        pipef = vars(pipem)[pipex[pipex.rindex('.')+1:]]
+        external_pipeline = ((pipex[pipex.rindex('.')+1:],pipef),)
+    else:
+        external_pipeline = ()
+    
+    pipelines = OrderedDict(external_pipeline+(
         ('RNAseq',RNAseq),
         ('ChIPseq',ChIPseq),
         ('ATACseq',ATACseq)

@@ -23,6 +23,11 @@ from luigi.util import inherits, requires
 from plumbum import local, colors
 from multiprocessing import cpu_count
 
+# matplotlib => setup for exporting svg figures only
+# work around for plotting issues with matplotlib
+import platform, matplotlib
+if platform.system() != 'Darwin': matplotlib.use('SVG')
+
 ## genairics configuration (integrated with luigi config)
 class genairics(luigi.Config):
     general_log = luigi.Parameter(default=os.path.expanduser('~/.genairics.log'))
