@@ -258,14 +258,23 @@ class processSamplesIndividually(luigi.Task):
         return self.requiredSampleTask
 
     def run(self):
-        pathlib.Path(self.output().path).touch()
+        pathlib.Path(self.output()[0].path).touch()
 
     def output(self):
-        return luigi.LocalTarget(
-            os.path.join(
-                self.requiredSampleTask.resultsdir,
-                self.requiredSampleTask.project,
-                'plumbing/completed_{}'.format(self.task_family)
+        return (
+            luigi.LocalTarget( # complete check point file
+                os.path.join(
+                    self.requiredSampleTask.resultsdir,
+                    self.requiredSampleTask.project,
+                    'plumbing/completed_{}'.format(self.task_family)
+                )
+            ),
+            luigi.LocalTarget( # sample results location (should be made by required task)
+                os.path.join(
+                    self.requiredSampleTask.resultsdir,
+                    self.requiredSampleTask.project,
+                    'sampleResults'
+                )
             )
         )
     

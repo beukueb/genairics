@@ -305,7 +305,7 @@ class mergeQualityChecks(luigi.Task):
         from io import TextIOWrapper
 
         qczips = glob.glob(
-            os.path.join(self.requiredSampleTask.input()[0].path,'sampleResults/*/QCresults/*.zip')
+            os.path.join(self.input()[1].path,'*/QCresults/*.zip')
         )
         if not qczips:
             raise Exception(
