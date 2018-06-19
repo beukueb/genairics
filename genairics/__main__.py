@@ -137,7 +137,7 @@ def main(args=None):
                     if isinstance(param._default,bool):
                         # bool flags should only be present in environ when set (value not checked)
                         optionals += ['--'+paran]
-                    if type(param._default) in typeMapping.values():
+                    elif type(param._default) in typeMapping.values():
                         optionals += ['--'+paran, os.environ[paran]]
                     else: positionals.append(os.environ[paran])
             logger.warning(
