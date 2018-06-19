@@ -40,8 +40,9 @@ class QueuJob(luigi.Task):
         jobparameters = dict(self.job.get_params())
         for n in self.job.get_param_names():
             v = self.job.__getattribute__(n)
-            if v and isinstance(v,bool) and jobparameters[n]._default != v:
-                jobvariables.append('{}={}'.format(n,v))
+            if isinstance(v,bool):
+                if jobparameters[n]._default != v:
+                    jobvariables.append('{}={}'.format(n,v))
             elif v:
                 jobvariables.append('{}={}'.format(n,v))
         qsub = machine['qsub'][(
