@@ -66,6 +66,8 @@ def prepareParser():
 
     parser.add_argument('--job-launcher', default = 'native', type = str, choices = joblaunchers.keys(),
                         help='choose where and how the job will run')
+    parser.add_argument('--cluster-Q', default = '', type = str,
+                        help = 'the queue and/or job cluster to which job will be submitted. Format should be qname@clusterservername')
     parser.add_argument('--remote-host', default = '', type = str, help = 'submit job through ssh')
     parser.add_argument('--save-config', action = 'store_true',
                         help = 'save path related default values to a configuration file in the directory where you started genairics')
@@ -132,6 +134,9 @@ def main(args=None):
             optionals = []
             for paran,param in pipelines[args[0]].get_params():
                 if paran in os.environ:
+                    if isinstance(param._default,bool):
+                        # bool flags should only be present in environ when set (value not checked)
+                        optionals += ['--'+paran]
                     if type(param._default) in typeMapping.values():
                         optionals += ['--'+paran, os.environ[paran]]
                     else: positionals.append(os.environ[paran])
@@ -162,6 +167,7 @@ def main(args=None):
     # Extract other non pipeline specific arguments
     joblauncher = joblaunchers[args.pop('job_launcher')]
     remotehost = args.pop('remote_host')
+    clusterQ = args.pop('cluster_Q')
     verbose = args.pop('verbose')
     workflow = args.pop('function')(**args)
 
@@ -171,7 +177,7 @@ def main(args=None):
     
     if joblauncher:
         logger.debug('submitting %s to %s',workflow,joblauncher)
-        joblauncher(job=workflow,remote=remotehost).run()
+        joblauncher(job=workflow,remote=remotehost,clusterQ=clusterQ).run()
     else: runWorkflow(workflow)
 
 # Run main program logics when script called directly

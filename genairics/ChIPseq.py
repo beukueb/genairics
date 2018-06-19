@@ -36,14 +36,14 @@ class Bowtie2MapSample(luigi.Task):
         
     def run(self):
         # run bowtie2 and store as bam file with mapping quality already filtered to mapQ 4
-        stdout = (local['bowtie2'].__getitem__( #need to use method __getitem__ instead of [] for arg list expansions
+        stdout = (local['bowtie2'][(
             '-p', config.threads,
-            '-x', os.path.join(self.input()['index'][0].path,self.genome),
-            *(
+            '-x', os.path.join(self.input()['index'][0].path,self.genome),)+
+            (
                 ('-U', self.input()['sample'][0].path) if not self.pairedEnd else
                 ('-1', self.input()['sample'][0].path, '-2', self.input()['sample'][1].path)
             )
-        ) | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
+        ] | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
         if stdout: logger.info(stdout)
 
     def output(self):

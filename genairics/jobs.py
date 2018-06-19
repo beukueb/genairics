@@ -22,7 +22,8 @@ class QueuJob(luigi.Task):
         description = 'the resources that will be asked by the qsub job'
     )
     remote = luigi.Parameter('', description='provide ssh config remote name, if job is to be submitted remotely')
-
+    clusterQ = luigi.Parameter('', description='provide queue@server to specify queue and/or server where job will be submitted')
+    
     def output(self):
         return (
             luigi.LocalTarget('{}/../results/{}/plumbing'.format(self.job.datadir,self.job.project))
@@ -36,13 +37,21 @@ class QueuJob(luigi.Task):
     def run(self):
         machine = SshMachine(self.remote) if self.remote else local
         jobvariables = ['GENAIRICS_ENV_ARGS={}'.format(self.job.task_family),'SET_LUIGI_FRIENDLY=']
+        jobparameters = dict(self.job.get_params())
         for n in self.job.get_param_names():
-            if self.job.__getattribute__(n): jobvariables.append('{}={}'.format(n,self.job.__getattribute__(n)))
-        qsub = machine['qsub'][
+            v = self.job.__getattribute__(n)
+            if v and isinstance(v,bool) and jobparameters[n]._default != v:
+                jobvariables.append('{}={}'.format(n,v))
+            elif v:
+                jobvariables.append('{}={}'.format(n,v))
+        qsub = machine['qsub'][(
             '-l','walltime={}'.format(self.resources['walltime']),
-            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.resources['ppn']),
+            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.resources['ppn']),)+
+            (('-q',self.clusterQ) if self.clusterQ else ())
         ]
-        qsubID = qsub('-v',','.join(jobvariables),machine['genairics'])
+        qsubID = qsub(
+            '-v',','.join(jobvariables),machine['genairics']
+        )
         logger.warning('qsub job submitted with ID %s. Waiting for result dir to be ready...',qsubID)
         # Wait until pipeline project result dir exists
         while not self.output()[0].exists():

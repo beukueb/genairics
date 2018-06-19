@@ -208,11 +208,49 @@ class setupProject(luigi.Task):
             os.mkdir(self.output()[1].path)
             os.mkdir(self.output()[2].path)
 
+    def getLogger(self):
+        """Get project logger
+
+        Setups logging for the project and returns the logger.
+        """
+        logger = logging.getLogger(__package__)
+        logfilename = os.path.join(
+            self.output()[1].path,
+            'pipeline.log'
+        )
+        if logfilename not in [
+                fh.baseFilename for fh in logger.handlers if isinstance(fh,logging.FileHandler)
+        ]:
+            logfile = logging.FileHandler(logfilename)
+            logfile.setLevel(logging.INFO)
+            logfile.setFormatter(
+                logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
+            )
+            logger.addHandler(logfile)
+        return logger
+
+@requires(setupProject)
+class ProjectTask(luigi.Task):
+    """ProjectTask
+
+    Class intended for inheriting instead of luigi.Task for defining
+    tasks that have setupProject in their parameter inheritance or
+    requirements.
+
+    Defines methods related to the project management, such as
+    getting the project logger.
+    """
+    def getLogger(self):
+        return self.clone(setupProject).getLogger()
+    
+#TODO REMOVE setupLogging
 @requires(setupProject)
 class setupLogging(luigi.Task):
     """Registers the logging file
 
     Always needs to run, to enable logging to the file
+
+    DEPRACATED you should use the setupProject getLogger function
     """
     def output(self):
         return luigi.LocalTarget(os.path.join(self.input()[1].path,'pipeline.log'))
