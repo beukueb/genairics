@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1] - 2018-06-19
+### Added
+- setupProject and ProjectTask offer getLogger method.
+- Example hello world script for external pipelines.
+
+### Fixed
+- Starting through qsub no longer worked because of changed bool
+flag arguments. Preparing qsub env variables and reading them fixed.
+
+### Changed
+- setupLogging deprecated
+
 ## [0.2.0] - 2018-06-18
 ### Added
 - External pipelines in genairics CLI through env variable GAX_PIPEX.
