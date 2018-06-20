@@ -181,9 +181,70 @@ class STARsample(luigi.Task):
 
     def output(self):
         return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
-        
+
+## BAM processing
+### genome bw coverage
+class coverageConfig(luigi.Config):
+    """coverage settings
+
+    Includes options for sorting and indexing the bam files for which
+    the coverage bw will be made
+    """
+    skipBWcoverage = luigi.BoolParameter(False,description='Skip making bw coverage files.')
+    normalizeTo1x = luigi.IntParameter(
+        default=0,
+        description="""
+        bamCoverage normalization option. If not provided will default to --normalizeUsingRPKM.
+        Else int needs to be provided of genome size to pass to --normalizeTo1x,
+        e.g. 2451960000 for human genome.
+        """
+    )
+
+@inherits(STARsample)
+@inherits(coverageConfig)
+class coverageTask(luigi.Task):
+    """coverage task
+
+    Sorts, indexes bam file and makes bw coverage file.
+    """
+    def requires(self):
+        return self.clone(STARsample)
+    
+    def run(self):
+        if not self.skipBWcoverage:
+            # Rename bam before processing
+            bwfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bw')
+            bamfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bam'),
+            bamfileOriginal = os.path.join(self.outfileDir,'Aligned.sortedByCoord.unsorted.bam')
+            os.rename(bamfile,bamfileOriginal)
+    
+            # Sort
+            stdout = local['samtools']('sort', '-o', bamfile, bamfileOriginal)
+            logger.info(stdout)
+    
+            # Index
+            stdout = local['samtools']('index', bamfile)
+            logger.info(stdout)
+            
+            # Coverage
+            with local.env(PYTHONPATH=''):
+                stdout = local['bamCoverage'](
+                    '-p', str(config.threads),
+                    *(('--normalizeTo1x',self.normalizeTo1x) if self.normalizeTo1x else ('--normalizeUsingRPKM',)),
+                    #'--extendReads', #TODO make possible for both single/paired end
+    		    '-b', bamfile, '-o', bwfile 
+                )
+                if stdout: logger.info(stdout)
+    
+        # Check point
+        pathlib.Path(self.output().path).touch()
+
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+
 ## RSEM counting
 @inherits(STARconfig)
+@inherits(coverageConfig)
 class RSEMconfig(luigi.Config):
     """
     Reference: http://deweylab.biostat.wisc.edu/rsem/README.html
@@ -211,9 +272,6 @@ class RSEMsample(luigi.Task):
             self.clone(STARsample)
         ]
 
-    def output(self):
-        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
-
     def run(self):
         stdout = local['rsem-calculate-expression'](
             '-p', config.threads, '--alignments',
@@ -229,6 +287,9 @@ class RSEMsample(luigi.Task):
         # Check point
         pathlib.Path(self.output().path).touch()
 
+    def output(self):
+        return luigi.LocalTarget('{}/.completed_{}'.format(self.outfileDir,self.task_family))
+
 # the sample pipeline can inherit and clone the sample subtasks directly
 @inherits(RSEMsample)
 class processTranscriptomicSampleTask(luigi.Task):
@@ -239,12 +300,18 @@ class processTranscriptomicSampleTask(luigi.Task):
     
     def run(self):
         #yield subtasks; if completed will go to next subtask
-        self.clone(setupSequencedSample).run()
-        self.clone(mergeSampleFASTQs).run()
-        self.clone(sampleQualityCheck).run()
-        self.clone(cutadaptSampleTask).run()
-        self.clone(STARsample).run()
-        self.clone(RSEMsample).run()
+        tasks = [
+            setupSequencedSample,
+            mergeSampleFASTQs,
+            sampleQualityCheck,
+            cutadaptSampleTask,
+            STARsample,
+            RSEMsample,
+            coverageTask
+        ]
+        for t in tasks:
+            t = self.clone(t)
+            if not t.complete(): t.run()
 
         pathlib.Path(self.output().path).touch()
 

@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file.
 processors per node to request.
 ### Changed
 - runWorkflow now only prints out task info if --verbose
+- coverageTask to RNAseq pipeline to generate bw coverage
+file. this also sorts the bam and creates its index for
+visualization in a genome browser.
 
 ## [0.2.1] - 2018-06-19
 ### Added
