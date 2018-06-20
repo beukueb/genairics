@@ -22,6 +22,7 @@ class QueuJob(luigi.Task):
         description = 'the resources that will be asked by the qsub job'
     )
     remote = luigi.Parameter('', description='provide ssh config remote name, if job is to be submitted remotely')
+    clusterPPN = luigi.IntParameter(config.threads, description='Processors per node to request')
     clusterQ = luigi.Parameter('', description='provide queue@server to specify queue and/or server where job will be submitted')
     
     def output(self):
@@ -47,7 +48,7 @@ class QueuJob(luigi.Task):
                 jobvariables.append('{}={}'.format(n,v))
         qsub = machine['qsub'][(
             '-l','walltime={}'.format(self.resources['walltime']),
-            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.resources['ppn']),)+
+            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.clusterPPN),)+
             (('-q',self.clusterQ) if self.clusterQ else ())
         ]
         qsubID = qsub(
