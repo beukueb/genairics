@@ -182,6 +182,8 @@ typeMapping = {
 }
 
 # Generic tasks
+from genairics.mixins import ProjectMixin
+
 class setupProject(luigi.Task):
     """setupProject prepares the logistics for running the pipeline and directories for the results
     optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
@@ -208,7 +210,8 @@ class setupProject(luigi.Task):
             os.mkdir(self.output()[1].path)
             os.mkdir(self.output()[2].path)
 
-    def getLogger(self):
+    @property
+    def logger(self):
         """Get project logger
 
         Setups logging for the project and returns the logger.
@@ -240,7 +243,7 @@ class setupProject(luigi.Task):
         return logger
 
 @requires(setupProject)
-class ProjectTask(luigi.Task):
+class ProjectTask(luigi.Task,ProjectMixin):
     """ProjectTask
 
     Class intended for inheriting instead of luigi.Task for defining
@@ -250,14 +253,12 @@ class ProjectTask(luigi.Task):
     Defines methods related to the project management, such as
     getting the project logger.
     """
-    def getLogger(self):
-        return self.clone(setupProject).getLogger()
-
-    def getPrint(self):
+    @property
+    def print(self):
         """
         Generates a printfunction that will output to the logger.
         """
-        logger = self.getLogger()
+        logger = self.logger
         def printfunction(*args,file=logger,level=logging.INFO,**kwargs):
             """
             Args:
@@ -361,7 +362,7 @@ def runTaskAndDependencies(task):
 def runWorkflow(pipeline,verbose=True):
     if verbose:
         # Log start runWorkflow pipeline
-        pipeline.clone(setupProject).getLogger().info(pipeline)
+        pipeline.clone(setupProject).logger.info(pipeline)
     # different options to start pipeline, only 1 not commented out
     scheduler = luigi.scheduler.Scheduler()
     worker = luigi.worker.Worker(scheduler = scheduler, worker_processes = 1)
