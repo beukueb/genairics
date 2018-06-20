@@ -214,7 +214,7 @@ class coverageTask(luigi.Task):
         if not self.skipBWcoverage:
             # Rename bam before processing
             bwfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bw')
-            bamfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bam'),
+            bamfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bam')
             bamfileOriginal = os.path.join(self.outfileDir,'Aligned.sortedByCoord.unsorted.bam')
             os.rename(bamfile,bamfileOriginal)
     

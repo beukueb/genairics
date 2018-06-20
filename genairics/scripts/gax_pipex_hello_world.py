@@ -35,7 +35,7 @@ class HelloWorldTask(ProjectTask,PlumbumMixin):
 
         # Example subcommand
         commandname = 'false' if self.fail else 'echo' 
-        self.execute(local[commandname],self.logger,self.name,'via echo')
+        self.execute(local[commandname],self.name,'via echo')
 
         # Example wrapping up
         #self.touchCheckpoint()

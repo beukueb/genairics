@@ -42,15 +42,23 @@ class PlumbumMixin(object):
     """PlumbumMixin class to offer 
     interface to plumbum local and redirect output to logger
     """
-    def execute(self,command,logger,*args,retcode=0):
+    def execute(self,command,*args,logger=None,retcode=0):
         """execute command and redirect output to logger
 
         Args:
            command (plumbum.commands.base.BoundCommand): The bound command to 
              run. If `*args` than they are still attached to the command.
+           logger (loggin.Logger): If Task does not have logger property,
+             needs to be provided here.
         """
         if args:
             command = command[args]
+        if hasattr(self,'logger') and not logger:
+            logger = self.logger
+        elif not logger:
+            raise Exception(
+                'Provide logger arg, or use mixin class ProjectMixin to provide logger attribute'
+            )
         retcode, stdout, stderr = command.run(retcode=retcode)
         if stdout: logger.info(stdout)
         if stderr: logger.warn(stderr)
