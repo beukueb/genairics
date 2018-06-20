@@ -185,7 +185,7 @@ def main(args=None):
             job=workflow,remote=remotehost,
             clusterQ=clusterQ,clusterPPN=clusterPPN
         ).run()
-    else: runWorkflow(workflow)
+    else: runWorkflow(workflow,verbose=verbose)
 
 # Run main program logics when script called directly
 if __name__ == "__main__":

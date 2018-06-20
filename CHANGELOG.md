@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 ### Added
 - --cluster-PPN option for qsub job-launcher to specify number of
 processors per node to request.
+### Changed
+- runWorkflow now only prints out task info if --verbose
 
 ## [0.2.1] - 2018-06-19
 ### Added

@@ -213,7 +213,12 @@ class setupProject(luigi.Task):
 
         Setups logging for the project and returns the logger.
         """
+        # Create project folders if necessary
+        if not self.complete(): self.run()
+
+        # Logging setup
         logger = logging.getLogger(__package__)
+        # Filehandle
         logfilename = os.path.join(
             self.output()[1].path,
             'pipeline.log'
@@ -227,6 +232,11 @@ class setupProject(luigi.Task):
                 logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
             )
             logger.addHandler(logfile)
+        # Stdout
+        if not [fh for fh in logger.handlers if isinstance(fh,logging.StreamHandler)]:
+            logconsole = logging.StreamHandler()
+            logconsole.setLevel(logging.DEBUG)
+            logger.addHandler(logconsole)
         return logger
 
 @requires(setupProject)
@@ -242,31 +252,36 @@ class ProjectTask(luigi.Task):
     """
     def getLogger(self):
         return self.clone(setupProject).getLogger()
-    
-#TODO REMOVE setupLogging
-@requires(setupProject)
-class setupLogging(luigi.Task):
-    """Registers the logging file
 
-    Always needs to run, to enable logging to the file
+    def getPrint(self):
+        """
+        Generates a printfunction that will output to the logger.
+        """
+        logger = self.getLogger()
+        def printfunction(*args,file=logger,level=logging.INFO,**kwargs):
+            """
+            Args:
+                file (logger): print `file` argument redefined to point to logger
+                level (int): Logging level, e.g. `logging.INFO` or `20`
+            """
+            from io import StringIO
+            stdout = StringIO()
+            print(*args,file=stdout,*kwargs)
+            file.log(level,stdout.getvalue())
+        return printfunction
 
-    DEPRACATED you should use the setupProject getLogger function
-    """
-    def output(self):
-        return luigi.LocalTarget(os.path.join(self.input()[1].path,'pipeline.log'))
-    
-    def run(self):
-        if not self.requires().complete(): self.requires().run()
-        
-        logger = logging.getLogger(__package__)
-        logfile = logging.FileHandler(self.output().path)
-        logfile.setLevel(logging.INFO)
-        logfile.setFormatter(
-            logging.Formatter('{asctime} {name} {levelname:8s} {message}', style='{')
+    def CheckpointTarget(self):
+        return luigi.LocalTarget(
+            os.path.join(
+                self.resultsdir,
+                self.project,
+                'plumbing/.completed_{}'.format(self.task_family)
+            )
         )
-        logger.addHandler(logfile)
-        if not self.complete(): pathlib.Path(self.output().path).touch()
-            
+
+    def touchCheckpoint(self):
+        pathlib.Path(self.CheckpointTarget().path).touch()
+                
 class setupSequencedSample(luigi.Task):
     """Sets up the output directory for a specified sequenced sample
     can be either single-end or paired end
@@ -343,9 +358,10 @@ def runTaskAndDependencies(task):
                 '{}\n{}'.format(colors.underline | task.task_family,colors.green | 'Task finished previously')
         )
         
-def runWorkflow(pipeline):
-    pipeline.clone(setupLogging).run()
-    logger.info(pipeline)
+def runWorkflow(pipeline,verbose=True):
+    if verbose:
+        # Log start runWorkflow pipeline
+        pipeline.clone(setupProject).getLogger().info(pipeline)
     # different options to start pipeline, only 1 not commented out
     scheduler = luigi.scheduler.Scheduler()
     worker = luigi.worker.Worker(scheduler = scheduler, worker_processes = 1)
