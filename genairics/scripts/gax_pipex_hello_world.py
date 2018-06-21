@@ -14,12 +14,13 @@ GAX_PIPEX and a PYTHONPATH that includes this scripts location.
 """
 import luigi
 #from luigi.util import requires, inherits
-from genairics import setupProject, ProjectTask
+from genairics.tasks import setupProject, ProjectTask
 from genairics.mixins import PlumbumMixin
 from plumbum import local
 
 #@requires(setupProject)
 class HelloWorldTask(ProjectTask,PlumbumMixin):
+    # Example parameters
     name = luigi.Parameter(description="person's name")
     age = luigi.IntParameter(default=0, description="person's age")
     loglevel = luigi.IntParameter(default=20, description="log level. 20 -> info; 30 -> warn (includes stdout)")

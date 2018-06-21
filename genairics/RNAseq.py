@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import luigi, os, tempfile, pathlib, glob
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi.util import inherits, requires
-from genairics import LuigiLocalTargetAttribute
+from genairics.targets import LuigiLocalTargetAttribute
 from plumbum import local, colors
 import pandas as pd, matplotlib.pyplot as plt
 import logging
