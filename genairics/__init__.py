@@ -81,9 +81,8 @@ def runTaskAndDependencies(task):
         
 def runWorkflow(pipeline,verbose=True):
     from genairics.tasks import setupProject
-    if verbose:
-        # Log start runWorkflow pipeline
-        pipeline.clone(setupProject).logger.info(pipeline)
+    # Log start runWorkflow pipeline
+    pipeline.clone(setupProject).logger.info(pipeline)
     # different options to start pipeline, only 1 not commented out
     scheduler = luigi.scheduler.Scheduler()
     worker = luigi.worker.Worker(scheduler = scheduler, worker_processes = 1)
