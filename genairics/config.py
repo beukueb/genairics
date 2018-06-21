@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#-*- coding: utf-8 -*-
 """genairics configuration 
 
 Integrated with luigi config.
@@ -6,6 +6,7 @@ Integrated with luigi config.
 import luigi, os
 from multiprocessing import cpu_count
 
+# General config
 class genairics(luigi.Config):
     general_log = luigi.Parameter(default=os.path.expanduser('~/.genairics.log'))
     datadir = luigi.Parameter(
@@ -44,6 +45,18 @@ class genairics(luigi.Config):
 
 config = genairics()
 
+# Program dependency config
+class program_dependency_config(luigi.Config):
+    package_manager = luigi.Parameter(
+        default = 'apt-get',
+        description = 'linux package manager command'
+    )
+    package_install_cmd_args = luigi.ListParameter(
+        default = ('install',),
+        description = 'commandline args for package manager'
+    )
+
+# Save config function
 def saveConfig(configs):
     """
     saves every config in list configs to LUIGI_CONFIG_PATH destination,

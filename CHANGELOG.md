@@ -4,13 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 ### Added
+- ProgramTarget in genairics.targets, for program dependencies.
 - --cluster-PPN option for qsub job-launcher to specify number of
 processors per node to request.
+- Created genairics.targets, genairics.tasks and genairics.config.
 ### Changed
 - runWorkflow now only prints out task info if --verbose
 - coverageTask to RNAseq pipeline to generate bw coverage
 file. this also sorts the bam and creates its index for
 visualization in a genome browser.
+- Moved a lot of code out of genairics.__init__ into the more relevant
+submodules targets, tasks and config
 
 ## [0.2.1] - 2018-06-19
 ### Added

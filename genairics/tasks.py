@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#-*- coding: utf-8 -*-
 """genairics custom task classes
 
 Usually subclasses luigi.Task
@@ -7,6 +7,7 @@ import luigi, logging, os, pathlib
 from luigi.util import inherits, requires
 from genairics.config import config
 from genairics.mixins import ProjectMixin
+from genairics.targets import ProgramTarget
 
 class setupProject(luigi.Task):
     """setupProject prepares the logistics for running the pipeline and directories for the results
@@ -161,3 +162,47 @@ class processSamplesIndividually(luigi.Task):
             )
         )
 
+# Program dependecy tasks
+from genairics.config import program_dependency_config
+ponfig = program_dependency_config()
+
+class ProgramDependencyBase(luigi.Task):
+    name = luigi.Parameter(description='Program name.')
+    remote = luigi.Parameter('',description='Machine on which depedency should exist. Empty string for local machine.')
+    
+    def output(self):
+        return ProgramTarget(self.name,self.remote)
+
+    @property
+    def prog(self):
+        if not self.complete():
+            self.run()
+        return self.output().prog
+    
+    def run(self):
+        """
+        Inheriting task classes have to overwrite to implement
+        installation instructions for program dependencies.
+        """
+        pass
+
+class ProgramDependencyPackage(ProgramDependencyBase):
+    package = luigi.Parameter('',description='Program package name.')
+    
+    def install_package(self):
+        import platform, plumbum as pl
+        system = platform.system()
+        machine = pl.SshMachine(self.remote) if self.remote else pl.local
+        if system == 'Darwin':
+            retcode,stdout,stderr = machine['brew'][
+                'install',self.package if self.package else self.name
+            ].run()
+        elif system == 'Linux':
+            retcode,stdout,stderr = machine[ponfig.package_manager][
+                ponfig.package_install_cmd_args
+            ][
+                self.package if self.package else self.name
+            ].run()
+
+    def run(self):
+        self.install_package()

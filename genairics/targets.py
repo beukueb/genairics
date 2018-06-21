@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#-*- coding: utf-8 -*-
 """genairics target classes
 
 Usually subclasses luigi.target.Target or luigi.LocalTarget
@@ -80,3 +80,27 @@ class LuigiLocalTargetAttribute(luigi.LocalTarget):
                 self.attribute
             )
         )
+
+# Plumbum program target
+class ProgramTarget(luigi.target.Target):
+    """ProgramTarget exists when a program is available on the system.
+
+    Args:
+        progname (str): The program name either simple (e.g. 'ls') or full (e.g. '/usr/bin/ls')
+        remote (str): The machine on which the program target should exist, if not provided is local machine.
+    """
+    def __init__(self,progname,remote=''):
+        import plumbum as pb
+        self.machine = pb.SshMachine(remote) if remote else pb.local
+        self.name = progname
+
+    def exists(self):
+        return self.name in self.machine
+
+    @property
+    def prog(self):
+        """
+        Makes the program available as self.prog.
+        Raises pb.CommandNotFound if prog does not yet exist on machine.
+        """
+        return self.machine[self.name]
