@@ -3,7 +3,7 @@
 
 Usually subclasses luigi.Task
 """
-import luigi, logging, os
+import luigi, logging, os, pathlib
 from luigi.util import inherits, requires
 from genairics.config import config
 from genairics.mixins import ProjectMixin

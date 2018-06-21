@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program at the root of the source package.
 """
 
-import luigi, os, pathlib, logging
+import luigi, os, logging
 from plumbum import local, colors
 
 # matplotlib => setup for exporting svg figures only

@@ -3,7 +3,7 @@
 
 Usually subclasses luigi.target.Target or luigi.LocalTarget
 """
-import luigi
+import luigi, pathlib
 
 class LuigiStringTarget(str,luigi.target.Target):
     """
