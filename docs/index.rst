@@ -11,6 +11,7 @@ Welcome to genairics's documentation!
    :caption: Contents:
 
    tutorials
+   vsc
    development
 
 Indices and tables
