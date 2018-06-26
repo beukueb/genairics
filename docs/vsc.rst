@@ -38,13 +38,26 @@ written, replace it with your own number.
 Prepare your work environment
 =============================
 
-Open a terminal, or continue to work in one already opened.
+Open a terminal, or continue to work in one already opened. And
+execute the following lines one by one.
 
-(sshconfig -> ssh vsc)
+.. code-block: sh
 
+   ssh vscXXX@gengar.ugent.be
+   wget -O ~/.bashrc https://raw.githubusercontent.com/dicaso/genairics/master/genairics/scripts/gax_bash_vsc.sh
+   source ~/.bashrc
+   mkdir -p $GAX_RESOURCES/repos $GAX_DATADIR $GAX_RESULTSDIR
+   module load pandas
+   pip install --user genairics
+   genairics -h
 
-mkdir data results
-cp $VSC_DATA_VO/resources/template.bashrc ~/.bashrc
+If all went well, the last line gives you the genairics help
+output. You are now ready to start and use genairics.
+   
+Optional: ssh config
+====================
+
+TODO: (sshconfig -> ssh vsc)
 
 Basespace api key
 =================

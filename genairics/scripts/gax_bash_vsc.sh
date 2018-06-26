@@ -51,7 +51,7 @@ if [ ! -d "$GAX_RESOURCES" ]; then
 fi
 if [ ! -d "$GAX_DATADIR" ]; then
     echo GAX_DATADIR directory does not exist, please execute the following line:
-    echo mkdir -p $GAX_DATADIR $GAX_RESULTDIR
+    echo mkdir -p $GAX_DATADIR $GAX_RESULTSDIR
 fi
 
 if [[ -v SET_LUIGI_FRIENDLY ]]; then module load pandas; unset SET_LUIGI_FRIENDLY; fi
