@@ -25,7 +25,7 @@ At the bottom of the screen you can upload the key that you made
 earlier with `ssh-keygen`.
 
 .. image:: /images/vsc/vsc_edit_account.png
-	   /images/vsc/vsc_upload_key2.png
+.. image:: /images/vsc/vsc_upload_key2.png
 
 To reach the `.ssh` folder where you can find the file to select
 (`id_rsa.pub`) type `CMD-SHIFT-G` and fill in `~/.ssh`.
@@ -62,11 +62,13 @@ Submit job to different cluster
 Example submit on golett.
 
 1. Find out server name
-   
-    module swap cluster/golett
-    qstat -q
-    QSERVER=master19.golett.gent.vsc
-    module swap cluster/delcatty
+
+.. code-block:: sh
+
+		module swap cluster/golett
+		qstat -q
+		QSERVER=master19.golett.gent.vsc
+		module swap cluster/delcatty
 
 2. Submit job with queue argument --cluster-Q
 
