@@ -41,7 +41,7 @@ Prepare your work environment
 Open a terminal, or continue to work in one already opened. And
 execute the following lines one by one.
 
-.. code-block: sh
+.. code-block:: sh
 
    ssh vscXXX@gengar.ugent.be
    wget -O ~/.bashrc https://raw.githubusercontent.com/dicaso/genairics/master/genairics/scripts/gax_bash_vsc.sh
@@ -53,20 +53,38 @@ execute the following lines one by one.
 
 If all went well, the last line gives you the genairics help
 output. You are now ready to start and use genairics.
-   
+
+GAX dependencies
+================
+
+If you are installing genairics as part of a personal account on the
+hpc, or your vo group has not yet been setup to run genairics, the
+following step is also required in order to use genairics.
+
+In your ssh session, start up a console with `genairics console` and execute the following line:
+
+.. code-block:: python
+
+		InstallDependencies()
+
+Get your BASESPACE_API_TOKEN accessToken
+========================================
+
+If you want to run analyses starting from an Illumina Basespace
+project you need to have an accessToken to be able to download your
+data in the pipelines. Follow the steps 1-5 from this link:
+
+`https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-downloader/ <https://help.basespace.illumina.com/articles/tutorials/using-the-python-run-downloader/>`_
+
+.. code-block:: sh
+
+		emacs ~/.BASESPACE_API #Store your accessToke here, instead of emacs use any editor you like
+		chmod 600 ~/.BASESPACE_API #For security, only rw access for your user
+
 Optional: ssh config
 ====================
 
 TODO: (sshconfig -> ssh vsc)
-
-Basespace api key
-=================
-
-* python
-
-* module load pandas
-pip3 install --upgrade --user genairics
-
 
 
 Submit job to different cluster
