@@ -206,3 +206,34 @@ class ProgramDependencyPackage(ProgramDependencyBase):
 
     def run(self):
         self.install_package()
+
+class ProgramDependencySource(ProgramDependencyBase):
+    source = luigi.Parameter('',description='Program source url.')
+    buildcmd = luigi.Parameter('make',description='Command for building from within source dir.')
+    builddir = luigi.Parameter('bin',description='Directory where software will be build relative to source dir.')
+    
+    def build_program(self):
+        import plumbum as pl, sys, glob
+        machine = pl.SshMachine(self.remote) if self.remote else pl.local
+        with machine.cwd(ponfig.repodir):
+            (machine['wget'][self.source] > sys.stdout)()
+            archive = self.source.split('/')[-1] #this is going to break if archive name not in url
+            if '.tar.' in archive:
+                (machine['tar']['-xvf',archive] > sys.stdout)()
+                sourcedir = archive[:archive.index('.tar.')]
+                with machine.cwd(sourcedir):
+                    (machine[self.buildcmd] > sys.stdout)()
+                    for binary in glob.glob(os.path.join(self.builddir,'*')):
+                        binary = os.path.join(
+                            ponfig.repodir,
+                            sourcedir,
+                            binary
+                        )
+                        # Make a symbolic link to each generated binary
+                        os.symlink(
+                            binary,
+                            os.path.join(config.resourcedir,'bin',os.path.basename(binary))
+                        )
+        
+    def run(self):
+        self.build_program()

@@ -55,6 +55,10 @@ class program_dependency_config(luigi.Config):
         default = ('install',),
         description = 'commandline args for package manager'
     )
+    repodir = luigi.Parameter(
+        default = os.environ.get('GAX_REPOS',os.path.expanduser('~/repos')),
+        description = 'default directory where dependency program source files are stored'
+    )
 
 # Save config function
 def saveConfig(configs):

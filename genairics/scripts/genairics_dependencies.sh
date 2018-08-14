@@ -15,7 +15,22 @@ export CPLUS_INCLUDE_PATH=$GAX_PREFIX/include
 mkdir -p $GAX_REPOS
 mkdir -p $GAX_ENVS
 
-# apt-get dependencies in Dockerfile, brew dependencies in README.md
+# Platform package dependencies (Debian, RPM-based and MacOSX supported through apt-get, yum and brew)
+# for other *nix ditributions it is necessary to install these dependencies up front
+# or use the docker image. To install these packages set GAX_INSTALL_PLATFORM_PACKAGES
+# in the shell where you will execute this script.
+if [[ ! -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then 
+    if command -v apt-get; then
+	sudo apt-get install -y git unzip rsync default-jre ant fastqc bedtools r-base cmake
+    elif command -v yum; then
+	sudo yum install -y git unzip rsync java-1.8.0-openjdk ant BEDTools R cmake
+	#fastqc package not available with yum
+    elif command -v brew; then
+	brew install git rsync java ant fastqc bedtools cmake
+	brew install openblas
+	brew install r --with-openblas
+    fi
+fi
 
 # Enable genairics CLI argument completion
 # https://github.com/kislyuk/argcomplete/
@@ -34,9 +49,20 @@ function wrapprogram {
     chmod +x $wrapperscript
 }
 
-## fastqc -> install with apt-get, brew, ...
+# R packages
+Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
+
+## fastqc
 if [[ -v VSC_HOME ]]; then
     wrapprogram fastqc FastQC
+elif ! command -v fastqc; then
+    # Intstalls fastqc for distro's not offering it as a package
+    cd $GAX_REPOS
+    git clone https://github.com/s-andrews/FastQC && cd FastQC
+    sed -i 's/1.5/1.6/g' build.xml # hack to allow compiling
+    ant
+    chmod +x bin/fastqc
+    ln -s $GAX_REPOS/FastQC/bin/fastqc $GAX_PREFIX/bin/fastqc
 fi
 
 ## Trim Galore
@@ -80,8 +106,6 @@ cd $GAX_REPOS
 git clone https://github.com/s-andrews/BamQC.git && cd BamQC
 if [[ -v VSC_HOME ]]; then
     module load ant
-elif [[ $OSTYPE == *"darwin"* ]]; then
-    brew install ant
 fi
 ant
 chmod 755 bin/bamqc
