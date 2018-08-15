@@ -56,15 +56,21 @@ def requestFiles(urlDir,fileregex,outdir):
                     logresources.warning('%s checksum did not match url location %s',csum,urlDir)
 
 # Tasks
-def InstallDependencies():
+def InstallDependencies(include_system_packages=False):
+    """Installs the genairics dependency programs
+
+    Args: 
+        include_system_packages (bool): If true, might ask for sudo to
+          install system packages, depending on the *nix distribution.
     """
-    Installs the genairics dependency programs
-    """
-    retcode,stdout,stderr = local[gscripts % 'genairics_dependencies.sh'].run()
-    sys.stdout.write(stdout)
-    sys.stderr.write(stderr)
-    if retcode:
-        raise Exception('genairics dependencies did not install correctly')
+    from genairics.config import config, dep_config
+    from plumbum import FG
+    with local.env(
+            GAX_PREFIX = dep_config.prefix,
+            GAX_REPOS = dep_config.repodir,
+            **({'GAX_INSTALL_PLATFORM_PACKAGES':''} if include_system_packages else {})
+            ):
+        local[gscripts % 'genairics_dependencies.sh'] & FG
     
 class RetrieveGenome(luigi.Task):
     """

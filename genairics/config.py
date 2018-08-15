@@ -64,6 +64,8 @@ class program_dependency_config(luigi.Config):
         description = 'genairics PREFIX directory for installing software'
     )
 
+dep_config = program_dependency_config()
+
 # Save config function
 def saveConfig(configs):
     """

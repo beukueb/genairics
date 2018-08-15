@@ -14,12 +14,16 @@ export CPLUS_INCLUDE_PATH=$GAX_PREFIX/include
 # Installs all dependencies for genairics to run its pipelines
 mkdir -p $GAX_REPOS
 mkdir -p $GAX_ENVS
+if [[ ! -d $GAX_PREFIX/bin ]]; then mkdir $GAX_PREFIX/bin; fi
+
+# Add GAX_PREFIX bin to path, to be sure dependencies that are already installed are found
+export PATH=$GAX_PREFIX/bin:$PATH
 
 # Platform package dependencies (Debian, RPM-based and MacOSX supported through apt-get, yum and brew)
 # for other *nix ditributions it is necessary to install these dependencies up front
 # or use the docker image. To install these packages set GAX_INSTALL_PLATFORM_PACKAGES
 # in the shell where you will execute this script.
-if [[ ! -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then 
+if [[ -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then 
     if command -v apt-get; then
 	sudo apt-get install -y git unzip rsync default-jre ant fastqc bedtools r-base cmake
     elif command -v yum; then
