@@ -9,6 +9,20 @@ Choose a different prefix, if you want dependencies installed in different dir
     git clone https://github.com/beukueb/genairics.git && cd genairics
     PREFIX=$VSC_DATA_VO/resources genairics/scripts/genairics_dependencies.sh
 
+virtualenv settings
+^^^^^^^^^^^^^^^^^^^
+
+If installing within a virtual environment with `mkvirtualenv` you can
+set genairics locations relative to the environment:
+
+     GAXDIR=~/repos/genairics
+     mkvirtualenv -a $GAXDIR -i ipython -r $GAXDIR/requirements.txt genairics
+     echo "export GAX_REPOS=$VIRTUAL_ENV/repos" >> $VIRTUAL_ENV/bin/postactivate
+     echo "export GAX_PREFIX=$VIRTUAL_ENV" >> $VIRTUAL_ENV/bin/postactivate
+     echo "export GAX_RESOURCES=$VIRTUAL_ENV/resources" >> $VIRTUAL_ENV/bin/postactivate
+     echo "unset GAX_REPOS GAX_PREFIX GAX_RESOURCES" >> $VIRTUAL_ENV/bin/predeactivate
+
+    
 git repo
 ^^^^^^^^
 For new version do `git updatemaster`, which automates working from

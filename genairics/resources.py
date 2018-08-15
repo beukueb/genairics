@@ -56,12 +56,15 @@ def requestFiles(urlDir,fileregex,outdir):
                     logresources.warning('%s checksum did not match url location %s',csum,urlDir)
 
 # Tasks
-class InstallDependencies(luigi.Task):
+def InstallDependencies():
     """
     Installs the genairics dependency programs
     """
-    def run(self):
-        local[gscripts % 'genairics_dependencies.sh']
+    retcode,stdout,stderr = local[gscripts % 'genairics_dependencies.sh'].run()
+    sys.stdout.write(stdout)
+    sys.stderr.write(stderr)
+    if retcode:
+        raise Exception('genairics dependencies did not install correctly')
     
 class RetrieveGenome(luigi.Task):
     """
