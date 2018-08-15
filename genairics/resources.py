@@ -72,11 +72,13 @@ def InstallDependencies(include_system_packages=False, setup_bashrc=False):
             **({'GAX_INSTALL_PLATFORM_PACKAGES':''} if include_system_packages else {})
             ):
         local[gscripts % 'genairics_dependencies.sh'] & FG
+    if setup_bashrc: setup_bash_config() 
 
 def setup_bash_config():
     """Add genairics config to .bashrc"""
     # Prepare config
     from genairics.config import config, dep_config
+    import re
     preamble = '###GAXCONFIG_BEGIN###'
     epilog = '###GAXCONFIG_END###'
     configstr ='''{}

@@ -25,12 +25,12 @@ export PATH=$GAX_PREFIX/bin:$PATH
 # in the shell where you will execute this script.
 if [[ -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then 
     if command -v apt-get; then
-	sudo apt-get install -y git unzip rsync default-jre ant fastqc bedtools r-base cmake
+	sudo apt-get install -y git unzip rsync default-jre ant fastqc samtools bedtools r-base cmake
     elif command -v yum; then
-	sudo yum install -y git unzip rsync java-1.8.0-openjdk ant BEDTools R cmake
+	sudo yum install -y git unzip rsync java-1.8.0-openjdk ant samtools BEDTools R cmake
 	#fastqc package not available with yum
     elif command -v brew; then
-	brew install git rsync java ant fastqc bedtools cmake
+	brew install git rsync java ant fastqc samtools bedtools cmake
 	brew install openblas
 	brew install r --with-openblas
     fi
