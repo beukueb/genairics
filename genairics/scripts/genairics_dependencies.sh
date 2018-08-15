@@ -54,7 +54,11 @@ function wrapprogram {
 }
 
 # R packages
-Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
+export R_LIBS=$GAX_PREFIX/Rlibs
+if [[ ! -d $R_LIBS ]]; then
+    mkdir $R_LIBS
+    Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
+fi
 
 ## fastqc
 if [[ -v VSC_HOME ]]; then

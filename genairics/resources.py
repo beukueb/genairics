@@ -56,12 +56,13 @@ def requestFiles(urlDir,fileregex,outdir):
                     logresources.warning('%s checksum did not match url location %s',csum,urlDir)
 
 # Tasks
-def InstallDependencies(include_system_packages=False):
+def InstallDependencies(include_system_packages=False, setup_bashrc=False):
     """Installs the genairics dependency programs
 
     Args: 
         include_system_packages (bool): If true, might ask for sudo to
           install system packages, depending on the *nix distribution.
+        setup_bashrc (bool): If true add default configuration to `.bashrc`.
     """
     from genairics.config import config, dep_config
     from plumbum import FG
@@ -71,6 +72,39 @@ def InstallDependencies(include_system_packages=False):
             **({'GAX_INSTALL_PLATFORM_PACKAGES':''} if include_system_packages else {})
             ):
         local[gscripts % 'genairics_dependencies.sh'] & FG
+
+def setup_bash_config():
+    """Add genairics config to .bashrc"""
+    # Prepare config
+    from genairics.config import config, dep_config
+    preamble = '###GAXCONFIG_BEGIN###'
+    epilog = '###GAXCONFIG_END###'
+    configstr ='''{}
+export GAX_REPOS={}
+export GAX_PREFIX={}
+export GAX_RESOURCES={}
+export PATH=$GAX_PREFIX/bin:$PATH
+export R_LIBS=$GAX_PREFIX/Rlibs
+{}
+'''.format(
+    preamble,
+    dep_config.repodir, dep_config.prefix, config.resultsdir,
+    epilog
+    )
+    config_section = re.compile(
+        r'{}.+{}'.format(preamble,epilog),
+        flags=re.DOTALL
+    )
+    with open(os.path.expanduser('~/.bashrc')) as f:
+        bashrc = f.read()
+    if config_section.search(bashrc):
+        bashrc_new = config_section.sub(configstr, bashrc)
+        with open(os.path.expanduser('~/.bashrc'),'wt') as f:
+            f.write(bashrc_new)
+    else:
+        with open(os.path.expanduser('~/.bashrc'),'at') as f:
+            f.write('\n')
+            f.write(configstr)
     
 class RetrieveGenome(luigi.Task):
     """
