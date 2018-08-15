@@ -66,14 +66,16 @@ elif ! command -v fastqc; then
 fi
 
 ## Trim Galore
-cd $GAX_REPOS
-curl -fsSL https://github.com/FelixKrueger/TrimGalore/archive/0.4.5.tar.gz -o trim_galore.tar.gz
-tar xvzf trim_galore.tar.gz
-rm trim_galore.tar.gz
-if [[ -v VSC_HOME ]]; then
-    wrapprogram $GAX_REPOS/TrimGalore-0.4.5/trim_galore fastqc nopurge
-else
-    ln -s $GAX_REPOS/TrimGalore-0.4.5/trim_galore $GAX_PREFIX/bin/trim_galore
+if ! command -v trim_galore; then
+    cd $GAX_REPOS
+    curl -fsSL https://github.com/FelixKrueger/TrimGalore/archive/0.4.5.tar.gz -o trim_galore.tar.gz
+    tar xvzf trim_galore.tar.gz
+    rm trim_galore.tar.gz
+    if [[ -v VSC_HOME ]]; then
+	wrapprogram $GAX_REPOS/TrimGalore-0.4.5/trim_galore fastqc nopurge
+    else
+	ln -s $GAX_REPOS/TrimGalore-0.4.5/trim_galore $GAX_PREFIX/bin/trim_galore
+    fi
 fi
 
 ## bowtie2
