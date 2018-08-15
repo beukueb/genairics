@@ -79,7 +79,7 @@ if ! command -v trim_galore; then
 fi
 
 ## bowtie2
-if [ ! $(command -v bowtie2) ]; then
+if ! command -v bowtie2; then
     ### Info from http://bowtie-bio.sourceforge.net/bowtie2/faq.shtml
     # Does Bowtie 2 supersede Bowtie 1?
     # Mostly, but not entirely. If your reads are shorter than 50 bp, you might want to try both Bowtie 1 and Bowtie 2 and see # which gives better results in terms of speed and sensitivity. In our experiments, Bowtie 2 is generally superior to
@@ -93,104 +93,124 @@ if [ ! $(command -v bowtie2) ]; then
 fi
 
 ## STAR
-cd $GAX_REPOS
-wget https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz
-tar -xzf 2.5.3a.tar.gz
-if [[ $OSTYPE == *"darwin"* ]]; then
-    ln -s $GAX_REPOS/STAR-2.5.3a/bin/MacOSX_x86_64/STAR $GAX_PREFIX/bin/STAR
-else
-    ln -s $GAX_REPOS/STAR-2.5.3a/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
+if ! command -v STAR; then
+    cd $GAX_REPOS
+    wget https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz
+    tar -xzf 2.5.3a.tar.gz
+    if [[ $OSTYPE == *"darwin"* ]]; then
+	ln -s $GAX_REPOS/STAR-2.5.3a/bin/MacOSX_x86_64/STAR $GAX_PREFIX/bin/STAR
+    else
+	ln -s $GAX_REPOS/STAR-2.5.3a/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
+    fi
 fi
 
 ## Quality control tools
 ### BamQC
-cd $GAX_REPOS
-git clone https://github.com/s-andrews/BamQC.git && cd BamQC
-if [[ -v VSC_HOME ]]; then
-    module load ant
+if ! command -v bamqc; then
+    cd $GAX_REPOS
+    git clone https://github.com/s-andrews/BamQC.git && cd BamQC
+    if [[ -v VSC_HOME ]]; then
+	module load ant
+    fi
+    ant
+    chmod 755 bin/bamqc
+    ln -s $GAX_REPOS/BamQC/bin/bamqc $GAX_PREFIX/bin/bamqc
 fi
-ant
-chmod 755 bin/bamqc
-ln -s $GAX_REPOS/BamQC/bin/bamqc $GAX_PREFIX/bin/bamqc
 
 ### samstat
-cd $GAX_REPOS
-wget https://downloads.sourceforge.net/project/samstat/samstat-1.5.1.tar.gz
-tar -zxf samstat-1.5.1.tar.gz && rm samstat-1.5.1.tar.gz && cd samstat-1.5.1
-./configure
-make
-ln -s $GAX_REPOS/samstat-1.5.1/src/samstat $GAX_PREFIX/bin/samstat
+if ! command -v samstat; then
+    cd $GAX_REPOS
+    wget https://downloads.sourceforge.net/project/samstat/samstat-1.5.1.tar.gz
+    tar -zxf samstat-1.5.1.tar.gz && rm samstat-1.5.1.tar.gz && cd samstat-1.5.1
+    ./configure
+    make
+    ln -s $GAX_REPOS/samstat-1.5.1/src/samstat $GAX_PREFIX/bin/samstat
+fi
 
 ### RSeQC #=> TODO not fully operational yet, is not possible to symbolically link executable
 #### download gene models (further info: https://sourceforge.net/projects/rseqc/files/BED/Human_Homo_sapiens/)
-cd $GAX_REPOS && mkdir RSeQC_gene_models && cd RSeQC_gene_models
-for rseqcref in hg38_rRNA.bed.gz hg38.HouseKeepingGenes.bed.gz; do
-    wget https://sourceforge.net/projects/rseqc/files/BED/Human_Homo_sapiens/$rseqcref
-    gunzip $rseqcref
-done
-if [[ -v VSC_HOME ]]; then
-    module load LZO
-    virtualenv --python=python2.7 $GAX_ENVS/rseqc_env
-    PYTHONPATH= $GAX_ENVS/rseqc_env/bin/pip install RSeQC --prefix=$GAX_ENVS/rseqc_env
-    #PYTHONPATH= $GAX_ENVS/rseqc_env/bin/python $GAX_ENVS/rseqc_env/bin/geneBody_coverage.py -h
-elif [[ $OSTYPE == *"darwin"* ]]; then
-    brew install lzo
-    pip2 install --user RSeQC
+if false; then
+    cd $GAX_REPOS && mkdir RSeQC_gene_models && cd RSeQC_gene_models
+    for rseqcref in hg38_rRNA.bed.gz hg38.HouseKeepingGenes.bed.gz; do
+	wget https://sourceforge.net/projects/rseqc/files/BED/Human_Homo_sapiens/$rseqcref
+	gunzip $rseqcref
+    done
+    if [[ -v VSC_HOME ]]; then
+	module load LZO
+	virtualenv --python=python2.7 $GAX_ENVS/rseqc_env
+	PYTHONPATH= $GAX_ENVS/rseqc_env/bin/pip install RSeQC --prefix=$GAX_ENVS/rseqc_env
+	#PYTHONPATH= $GAX_ENVS/rseqc_env/bin/python $GAX_ENVS/rseqc_env/bin/geneBody_coverage.py -h
+    elif [[ $OSTYPE == *"darwin"* ]]; then
+	brew install lzo
+	pip2 install --user RSeQC
+    fi
 fi
 
 ## RSEM
-cd $GAX_REPOS
-git clone https://github.com/deweylab/RSEM.git && cd RSEM && make
-if [[ -v VSC_HOME ]]; then
-    wrapprogram $GAX_REPOS/RSEM/rsem-prepare-reference Perl
-    wrapprogram $GAX_REPOS/RSEM/rsem-calculate-expression Perl
-else
-    ln -s $GAX_REPOS/RSEM/rsem-prepare-reference $GAX_PREFIX/bin/rsem-prepare-reference
-    ln -s $GAX_REPOS/RSEM/rsem-calculate-expression $GAX_PREFIX/bin/rsem-calculate-expression
+if ! command -v rsem-calculate-expression; then
+    cd $GAX_REPOS
+    git clone https://github.com/deweylab/RSEM.git && cd RSEM && make
+    if [[ -v VSC_HOME ]]; then
+	wrapprogram $GAX_REPOS/RSEM/rsem-prepare-reference Perl
+	wrapprogram $GAX_REPOS/RSEM/rsem-calculate-expression Perl
+    else
+	ln -s $GAX_REPOS/RSEM/rsem-prepare-reference $GAX_PREFIX/bin/rsem-prepare-reference
+	ln -s $GAX_REPOS/RSEM/rsem-calculate-expression $GAX_PREFIX/bin/rsem-calculate-expression
+    fi
 fi
 
 ## bedtools
-cd $GAX_REPOS
-wget https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz
-tar -zxvf bedtools-2.25.0.tar.gz
-cd bedtools2 && make
-for program in $(ls bin); do
-    ln -s $GAX_REPOS/bedtools2/bin/$program $GAX_PREFIX/bin/$program
-done
+if ! command -v bedtools; then
+    cd $GAX_REPOS
+    wget https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz
+    tar -zxvf bedtools-2.25.0.tar.gz
+    cd bedtools2 && make
+    for program in $(ls bin); do
+	ln -s $GAX_REPOS/bedtools2/bin/$program $GAX_PREFIX/bin/$program
+    done
+fi
 
 ## MACS2
-virtualenv --python=python2.7 $GAX_ENVS/macs2_env
-PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
-ln -s $GAX_ENVS/macs2_env/bin/macs2 $GAX_PREFIX/bin/macs2
+if ! command -v macs2; then
+    virtualenv --python=python2.7 $GAX_ENVS/macs2_env
+    PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
+    ln -s $GAX_ENVS/macs2_env/bin/macs2 $GAX_PREFIX/bin/macs2
+fi
 
 ## deeptools
-### dependencies
-#### cURL -> so cURL module does not have to be loaded
-if [[ -v VSC_HOME ]]; then
-    cd $GAX_REPOS
-    git clone https://github.com/curl/curl.git && cd curl
-    ./buildconf
-    ./configure --prefix=$GAX_PREFIX
-    make
-    make install
+if ! command -v bamCoverage; then
+    ### dependencies
+    #### cURL -> so cURL module does not have to be loaded
+    if [[ -v VSC_HOME ]]; then
+	cd $GAX_REPOS
+	git clone https://github.com/curl/curl.git && cd curl
+	./buildconf
+	./configure --prefix=$GAX_PREFIX
+	make
+	make install
+    fi
+    ### main package
+    virtualenv --python=python3 $GAX_ENVS/deeptools_env
+    PYTHONPATH= $GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
+    ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
 fi
-### main package
-virtualenv --python=python3 $GAX_ENVS/deeptools_env
-PYTHONPATH= $GAX_ENVS/deeptools_env/bin/pip install deeptools --prefix=$GAX_ENVS/deeptools_env
-ln -s $GAX_ENVS/deeptools_env/bin/bamCoverage $GAX_PREFIX/bin/bamCoverage
 
 ## homer
-cd $GAX_REPOS
-mkdir homer && cd homer
-wget http://homer.ucsd.edu/homer/configureHomer.pl
-perl configureHomer.pl -install homer
-ln -s $GAX_REPOS/homer/bin/makeTagDirectory $GAX_PREFIX/bin/makeTagDirectory
-ln -s $GAX_REPOS/homer/bin/findPeaks $GAX_PREFIX/bin/findPeaks
-ln -s $GAX_REPOS/homer/bin/pos2bed.pl $GAX_PREFIX/bin/pos2bed.pl
+if ! command -v findPeaks; then
+    cd $GAX_REPOS
+    mkdir homer && cd homer
+    wget http://homer.ucsd.edu/homer/configureHomer.pl
+    perl configureHomer.pl -install homer
+    ln -s $GAX_REPOS/homer/bin/makeTagDirectory $GAX_PREFIX/bin/makeTagDirectory
+    ln -s $GAX_REPOS/homer/bin/findPeaks $GAX_PREFIX/bin/findPeaks
+    ln -s $GAX_REPOS/homer/bin/pos2bed.pl $GAX_PREFIX/bin/pos2bed.pl
+fi
 
 ## freebayes
-cd $GAX_REPOS
-git clone --recursive https://github.com/ekg/freebayes.git && cd freebayes
-make
-ln -s $GAX_REPOS/freebayes/bin/freebayes $GAX_PREFIX/bin/freebayes
-ln -s $GAX_REPOS/freebayes/bin/bamleftalign $GAX_PREFIX/bin/bamleftalign
+if ! command -v freebayes; then
+    cd $GAX_REPOS
+    git clone --recursive https://github.com/ekg/freebayes.git && cd freebayes
+    make
+    ln -s $GAX_REPOS/freebayes/bin/freebayes $GAX_PREFIX/bin/freebayes
+    ln -s $GAX_REPOS/freebayes/bin/bamleftalign $GAX_PREFIX/bin/bamleftalign
+fi
