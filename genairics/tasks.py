@@ -232,7 +232,7 @@ class ProgramDependencySource(ProgramDependencyBase):
                         # Make a symbolic link to each generated binary
                         os.symlink(
                             binary,
-                            os.path.join(config.resourcedir,'bin',os.path.basename(binary))
+                            os.path.join(ponfig.prefix,'bin',os.path.basename(binary))
                         )
         
     def run(self):
