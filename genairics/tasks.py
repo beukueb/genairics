@@ -13,7 +13,7 @@ class setupProject(luigi.Task):
     """setupProject prepares the logistics for running the pipeline and directories for the results
     optionally, the metadata can already be provided here that is necessary for e.g. differential expression analysis
     """
-    project = luigi.Parameter(description='name of the project. if you want the same name as Illumina run name, provide here')
+    project = luigi.Parameter(description='name of the project; used as folder name within datadir and resultsdir')
     datadir = luigi.Parameter(config.datadir, description='directory that contains data in project subfolders')
     resultsdir = luigi.Parameter(config.resultsdir, description='directory that contains results in project subfolders')
     metafile = luigi.Parameter('',description='metadata file for interpreting results and running differential expression analysis')

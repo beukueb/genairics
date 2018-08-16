@@ -109,6 +109,15 @@ export R_LIBS=$GAX_PREFIX/Rlibs
         with open(os.path.expanduser('~/.bashrc'),'at') as f:
             f.write('\n')
             f.write(configstr)
+
+def setup_directories():
+    """Create genairics directories as specified
+    by the configuration
+    """
+    from genairics.config import config
+    os.mkdir(config.resourcedir)
+    os.mkdir(config.datadir)
+    os.mkdir(config.resultsdir)
     
 class RetrieveGenome(luigi.Task):
     """
