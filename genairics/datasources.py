@@ -13,6 +13,60 @@ from plumbum import local
 from genairics import config, setupProject, setupSequencedSample
 from genairics.resources import RetrieveGenome
 
+# Basic data collecting task
+@requires(setupProject)
+class DataSource(luigi.Task):
+    """Data source task
+
+    Defines a parameter that specifies where the original data is located.
+    This is a meta task, it will then execute the specific task, for downloading
+    the data to the local data directory.
+
+    Datasource providers:
+        file:///file/path => simple file path location of a directory containing the raw data.
+        basespace://NSQRun => NSQRun identifier
+    """
+    source = luigi.Parameter('',
+        description = '''Data location. Format should be [provider://]path
+If no provider, it is assumed to be a file path location. 
+Providers: `file`, `basespace`
+'''
+    )
+    
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.datadir,self.project))
+
+    def run(self):
+        import re
+        source_re = re.compile(r'^(?P<provider>\S+)://(?P<location>\S*)$')
+        source_m = source_re.match(self.source)
+        if source_m:
+            provider, location = source_m.groups()
+        else: # considered file location if no provider
+            provider, location = 'file', self.source
+        # Data source cases:
+        if provider == 'file':
+            # In case the data is a local file path, the directory is linked to the datadir
+            os.symlink(location,self.output().path)
+        elif provider == 'basespace':
+            bssource = BaseSpaceSource(
+                NSQrun = location,
+                **self.projectSetupParams
+            )
+            bssource.run()
+
+    @property
+    def projectSetupParams(self):
+        """Returns the setupProject param dict
+        for intantiating other datasource tasks
+        """
+        sp = self.clone_parent()
+        return {
+            p:sp.__getattribute__(p)
+            for p in sp.get_param_names()
+        }
+    
+# Specific data collecting tasks
 @inherits(setupProject)
 class BaseSpaceSource(luigi.Task):
     """

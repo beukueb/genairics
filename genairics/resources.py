@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-Tasks here prepare resources that are required for some
+# -*- coding: utf-8 -*-
+"""Tasks here prepare resources that are required for some
 pipeline tasks, and are generally available from the
 resources directory as specified by $GAX_RESOURCES or
 in genairics config file 'resourcedir' option
@@ -75,7 +74,10 @@ def InstallDependencies(include_system_packages=False, setup_bashrc=False):
     if setup_bashrc: setup_bash_config() 
 
 def setup_bash_config():
-    """Add genairics config to .bashrc"""
+    """Add genairics config to .bashrc
+
+    TODO: optionally add to config of virtualenv instead of .bashrc
+    """
     # Prepare config
     from genairics.config import config, dep_config
     import re
