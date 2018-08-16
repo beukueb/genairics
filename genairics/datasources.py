@@ -24,7 +24,8 @@ class DataSource(luigi.Task):
 
     Datasource providers:
         file:///file/path => simple file path location of a directory containing the raw data.
-        basespace://NSQRun => NSQRun identifier
+        basespace://NSQRun => NSQRun identifier.
+        ena://projectID => ENA project ID.
     """
     source = luigi.Parameter('',
         description = '''Data location. Format should be [provider://]path
@@ -55,6 +56,14 @@ Providers: `file`, `basespace`
                 **self.projectSetupParams
             )
             bssource.run()
+        elif provider == 'ena':
+            enasource = ENAsource(
+                ENAaccession = location,
+                **self.projectSetupParams
+            )
+            enasource.run()
+        else:
+            raise Exception('Provider "{}" unknown'.format(provider))
 
     @property
     def projectSetupParams(self):
@@ -68,6 +77,7 @@ Providers: `file`, `basespace`
         }
     
 # Specific data collecting tasks
+## Illumina
 @inherits(setupProject)
 class BaseSpaceSource(luigi.Task):
     """
@@ -152,6 +162,38 @@ class BaseSpaceSource(luigi.Task):
         # Rename tempdir to final project name dir
         os.rename(outtempdir,self.output().path)
 
+## ENA
+@requires(setupProject)
+class ENAsource(luigi.Task):
+    """
+    Downloads fastq's from given ENA accession number
+    """
+    ENAaccession = luigi.Parameter('',description='sequencing run project name')
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.datadir,self.project))
+
+    def run(self):
+        import requests, io, pandas as pd, tempfile
+        from plumbum import local, FG
+        #projecturl = "http://www.ebi.ac.uk/ena/data/view/{}&display=xml" #did not give download location for fastqs
+        projecturl = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession={}&result=read_run&fields=run_accession,fastq_ftp,fastq_md5,fastq_bytes"
+        r = requests.get(projecturl.format(self.ENAaccession))
+        samples = pd.read_table(io.StringIO(r.text))
+
+        # Prepare temp dir for downloading
+        outtempdir = tempfile.mkdtemp(prefix=self.datadir+'/',suffix='/')
+        for index, sample in samples.iterrows():
+            sampledir = os.path.join(outtempdir,sample.run_accession)
+            os.mkdir(sampledir)
+            with local.cwd(sampledir):
+                for f in sample.fastq_ftp.split(';'):
+                    local['wget']['http://'+f] & FG
+                    
+        # Rename tempdir to final project name dir
+        os.rename(outtempdir,self.output().path)
+
+# Raw data preprocessing
 @requires(BaseSpaceSource)
 class mergeFASTQs(luigi.Task):
     """
@@ -308,14 +350,7 @@ class SubsampleProject(luigi.Task):
                             gfout.writelines(lines)
         # renaming temporary outdir to final subdir
         os.rename(outdir,subdir)
-
-@inherits(setupProject)
-class ENAsource(luigi.Task):
-    """
-    Downloads fastq's from given ENA accession number
-    """
-    ENAaccession = luigi.Parameter('',description='sequencing run project name')
-
+            
 @inherits(setupProject)
 @inherits(RetrieveGenome)
 class ENAtestSource(luigi.Task):
