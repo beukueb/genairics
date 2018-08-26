@@ -184,11 +184,16 @@ class ENAsource(luigi.Task):
         # Prepare temp dir for downloading
         outtempdir = tempfile.mkdtemp(prefix=self.datadir+'/',suffix='/')
         for index, sample in samples.iterrows():
-            sampledir = os.path.join(outtempdir,sample.run_accession)
-            os.mkdir(sampledir)
-            with local.cwd(sampledir):
-                for f in sample.fastq_ftp.split(';'):
-                    local['wget']['http://'+f] & FG
+            try:
+                sampledir = os.path.join(outtempdir,sample.run_accession)
+                os.mkdir(sampledir)
+                with local.cwd(sampledir):
+                    for f in sample.fastq_ftp.split(';'):
+                        local['wget']['http://'+f] & FG
+            except AttributeError:
+                import warnings
+                warnings.warn('No ftp fastq download location for %s' % sample.run_accession)
+                os.rmdir(sampledir)
                     
         # Rename tempdir to final project name dir
         os.rename(outtempdir,self.output().path)
