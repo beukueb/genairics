@@ -107,22 +107,31 @@ class ProjectTask(luigi.Task,ProjectMixin):
 
     def touchCheckpoint(self):
         pathlib.Path(self.CheckpointTarget().path).touch()
-                
+
+## Individual sample tasks
+class SampleConfig(luigi.Config):
+    """Generic sample specific parameters for input and output,
+    that should not be inherited by tasks that are exposed directly
+    to the end-user.
+    """
+    sampleDir = luigi.Parameter(description = 'dir with sample fastq files')
+    outfileDir = luigi.Parameter(description = 'sample output dir')
+
+@inherits(SampleConfig)
 class setupSequencedSample(luigi.Task):
     """Sets up the output directory for a specified sequenced sample
     can be either single-end or paired end
 
     this is intended as the starting point of pipelines that fully process 1 sample a time
     """
-    sampleDir = luigi.Parameter(description = 'dir with sample fastq files')
     pairedEnd = luigi.BoolParameter(default = False, description = 'True in case of paired-end sequencing')
-    outfileDir = luigi.Parameter(description = 'sample output dir')
 
     def output(self):
         return luigi.LocalTarget(self.outfileDir)
         
     def run(self):
         if not self.output().exists(): os.mkdir(self.output().path)
+
 
 #@inherits(setupProject)
 class processSamplesIndividually(luigi.Task):
@@ -162,7 +171,7 @@ class processSamplesIndividually(luigi.Task):
             )
         )
 
-# Program dependecy tasks
+# Program dependency tasks
 from genairics.config import program_dependency_config
 ponfig = program_dependency_config()
 
