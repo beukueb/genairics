@@ -110,7 +110,7 @@ class PipelineWrapper(Pipeline):
                 # Prepare sample generator
                 import glob
                 sampleDirs = glob.glob(os.path.join(self.datadir, self.project, '*'))
-                sampleResultsDir = os.path.join(self.datadir, self.project, 'sampleResults')
+                sampleResultsDir = os.path.join(self.resultsdir, self.project, 'sampleResults')
                 if sampleDirs:
                     if not os.path.exists(sampleResultsDir):
                         # Creating sampleResults dir here, upon entering sample context and when
@@ -123,6 +123,7 @@ class PipelineWrapper(Pipeline):
                         )
                         for d in sampleDirs
                     )
+                    return self.sample_generator
                 else:
                     raise Exception('Dynamic dependency not yet met, cannot provide sample directories.')
             else: # Parameters are not yet inherited,
