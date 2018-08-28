@@ -37,6 +37,21 @@ class ProjectMixin(object):
             self.project,
             'plumbing'
         )
+
+class SampleTaskMixin(object):
+    """Sample task specific functionality
+    For now only redefines the checkpoint file location
+    """
+    def CheckpointTarget(self):
+        return luigi.LocalTarget(
+            os.path.join(
+                self.resultsdir,
+                self.project,
+                'sampleResults',
+                self.outfileDir,
+                '.completed_{}'.format(self.task_family)
+            )
+        )
     
 class PlumbumMixin(object):
     """PlumbumMixin class to offer 

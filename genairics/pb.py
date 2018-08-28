@@ -14,7 +14,7 @@ from luigi.util import inherits, requires
 # genairics imports
 from genairics.tasks import setupProject, ProjectTask, SampleConfig
 from genairics.tasks import setupSequencedSample as BaseSampleTask
-
+from genairics.mixins import SampleTaskMixin
 
 # general imports
 import os
@@ -130,5 +130,5 @@ class PipelineWrapper(Pipeline):
             return True
         else: return False
 
-class SamplePipelineWrapper(PipelineWrapper):
+class SamplePipelineWrapper(SampleTaskMixin,PipelineWrapper):
     baseTask = BaseSampleTask
