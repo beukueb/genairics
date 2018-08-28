@@ -36,7 +36,7 @@ class Pipeline(ProjectTask):
 
 sample_specific_params = set(SampleConfig.get_param_names())
 
-class PipelineWrapper(WrapperTask):
+class PipelineWrapper(Pipeline):
     """
     Produces an executable pipeline that can be defined as follows:
 
