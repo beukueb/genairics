@@ -110,11 +110,16 @@ class PipelineWrapper(Pipeline):
                 # Prepare sample generator
                 import glob
                 sampleDirs = glob.glob(os.path.join(self.datadir, self.project, '*'))
+                sampleResultsDir = os.path.join(self.datadir, self.project, 'sampleResults')
                 if sampleDirs:
+                    if not os.path.exists(sampleResultsDir):
+                        # Creating sampleResults dir here, upon entering sample context and when
+                        # sample data dirs ready for processing (could also do this in setupProject)
+                        os.mkdir(sampleResultsDir)
                     self.sample_generator = lambda: ( # Creates a function to provide the generator on each call
                         ( # Generates tuples of the sample data and results directory
                             d,
-                            os.path.join(self.datadir, self.project, 'sampleResults', os.path.basename(d))
+                            os.path.join(sampleResultsDir, os.path.basename(d))
                         )
                         for d in sampleDirs
                     )
