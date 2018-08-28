@@ -118,7 +118,12 @@ class SampleConfig(luigi.Config):
     outfileDir = luigi.Parameter(description = 'sample output dir')
 
 @inherits(SampleConfig)
-class setupSequencedSample(luigi.Task):
+class SampleTask(luigi.Task):
+    """Task with the minimum set of sample parameters for input/output
+    and convenience properties.
+    """
+
+class setupSequencedSample(SampleTask):
     """Sets up the output directory for a specified sequenced sample
     can be either single-end or paired end
 

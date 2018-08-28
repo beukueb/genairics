@@ -13,6 +13,11 @@ from luigi.util import inherits, requires
 
 # genairics imports
 from genairics.tasks import setupProject, ProjectTask, SampleConfig
+from genairics.tasks import setupSequencedSample as BaseSampleTask
+
+
+# general imports
+import os
 
 # Pipeline meta tasks
 class Pipeline(ProjectTask):
@@ -48,30 +53,49 @@ class PipelineWrapper(WrapperTask):
     >>> salmonellaGenome.inherit_task_parameters()
     """
     params_inherited = False
+    baseTask = setupProject
     
     @classmethod
     def inherit_task_parameters(cls):
-        pipeline = inherits(setupProject)(cls)
-        for t in cls.tasks(None): # passing None as stub for `self`
-            if issubclass(t,Task) and t is not setupProject:
+        pipeline = inherits(cls.baseTask)(cls)
+        from unittest.mock import MagicMock
+        for t in cls.tasks(MagicMock()): # passing cls as stub for `self`
+            if issubclass(t,Task) and t is not cls.baseTask:
                 pipeline = inherits(t)(pipeline)
         sample_specific_params = SampleConfig.get_param_names()
         for param in pipeline.get_param_names():
-            if param in sample_specific_params:
-                continue # sample specific params do not need to be inherited
-            setattr(
-                cls,param,
-                getattr(pipeline,param)
-            )
+            if param in sample_specific_params and cls.baseTask is setupProject:
+                delattr(cls,param)
+                #continue # sample specific params do not need to be inherited
+            #setattr( # cls == pipeline, so no need to setattr again
+            #    cls,param,
+            #    getattr(pipeline,param)
+            #)
         cls.params_inherited = True
 
     def requires(self):
-        yield self.clone(setupProject)
+        yield self.clone(self.baseTask)
+        self.previousTask = self.baseTask
         for task in self.tasks():
-            if issubclass(task,Task) and task is not setupProject:
+            # Sample context specific task
+            if hasattr(self,'active_context'):
+                # TODO inheritance is not yet dealt with for sample specific task
+                # within context. For now make a SamplePipelineWrapper to use in the
+                # context as a single task
+                task = requires(self.previousTask)(task)
+                for sampleDir, outfileDir in self.sample_generator():
+                    yield task(
+                        sampleDir = sampleDir,
+                        outfileDir = outfileDir,
+                         **{k:self.param_kwargs[k] for k in task.get_param_names()}
+                    )
+            # General project tasks    
+            elif issubclass(task,Task) and task is not self.baseTask:
+                task = requires(self.previousTask)(task)
                 yield self.clone(task)
+                self.previousTask = task
 
-    # Context management
+    # Sample context management
     def sample_context(self):
         self.active_context = True
         return self
@@ -79,13 +103,28 @@ class PipelineWrapper(WrapperTask):
     def __enter__(self):
         if self.active_context:
             if self.params_inherited:
-                return 'Testing context'
+                # Prepare sample generator
+                import glob
+                sampleDirs = glob.glob(os.path.join(self.datadir, self.project, '*'))
+                if sampleDirs:
+                    self.sample_generator = lambda: ( # Creates a function to provide the generator on each call
+                        ( # Generates tuples of the sample data and results directory
+                            d,
+                            os.path.join(self.datadir, self.project, 'sampleResults', os.path.basename(d))
+                        )
+                        for d in sampleDirs
+                    )
+                else:
+                    raise Exception('Dynamic dependency not yet met, cannot provide sample directories.')
             else: # Parameters are not yet inherited,
                 # return a stub to expose sample tasks for inheritance
                 return [None]
 
     def __exit__(self, type, value, tb):
-        del self.active_context
+        del self.active_context, self.sample_generator
         if not tb:
             return True
         else: return False
+
+class SamplePipelineWrapper(PipelineWrapper):
+    baseTask = BaseSampleTask

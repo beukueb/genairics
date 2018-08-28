@@ -1,22 +1,30 @@
 #-*- coding: utf-8 -*-
 """Pipeline for Salmonella enteritidis project
 
-For help on settings run `GAX_PIPEX=genairics.pipelines.bacterial.salmonella.genome genairics RNAseq -h`
+For help on settings run `GAX_PIPEX=genairics.pipelines.bacterial.salmonella.SalmonellaProject genairics SalmonellaProject -h`
 """
 from genairics import pb
-from genairics.datasources import DataSource
+from genairics.tasks import setupProject, setupSequencedSample
+from genairics.datasources import DataSource, mergeSampleFASTQs
+from genairics.tasks.qc import QualityCheck
 
 #Pipeline
-@pb.inherits(DataSource)
-class salmonellaGenomePipeline(pb.Pipeline):
-    def requires(self):
-        yield self.clone(setupProject)
-        yield self.clone(DataSource)
+# Sample level
+class SalmonellaSample(pb.SamplePipelineWrapper):
+    def tasks(self):
+        yield setupSequencedSample
+        yield mergeSampleFASTQs
+        yield QualityCheck
+
+SalmonellaSample.inherit_task_parameters()
+
+# Project level
+class SalmonellaProject(pb.PipelineWrapper):
+    def tasks(self):
+        yield setupProject
+        yield DataSource
         
-        with self.processSamplesIndividually() as samples:
-            for sample in samples:
-                yield sample
-                yield QualityCheck
-                yield AlignSample
-        yield PCAplotCounts
-        yield mergeAlignResults
+        with self.sample_context() as sample_context:
+            yield SalmonellaSample
+
+SalmonellaProject.inherit_task_parameters()
