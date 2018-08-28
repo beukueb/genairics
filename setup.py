@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 package = "genairics"
 version = "0.2.2"
@@ -10,7 +10,7 @@ setup(name = package,
       author = 'Christophe Van Neste',
       author_email = 'christophe.vanneste@ugent.be',
       license = 'GNU GENERAL PUBLIC LICENSE',
-      packages = ['genairics'],
+      packages = find_packages(),
       install_requires = [
           'luigi',
           'plumbum',
