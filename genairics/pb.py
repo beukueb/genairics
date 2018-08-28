@@ -34,6 +34,8 @@ class Pipeline(ProjectTask):
     def run(self):
         self.touchCheckpoint()
 
+sample_specific_params = set(SampleConfig.get_param_names())
+
 class PipelineWrapper(WrapperTask):
     """
     Produces an executable pipeline that can be defined as follows:
@@ -62,7 +64,6 @@ class PipelineWrapper(WrapperTask):
         for t in cls.tasks(MagicMock()): # passing cls as stub for `self`
             if issubclass(t,Task) and t is not cls.baseTask:
                 pipeline = inherits(t)(pipeline)
-        sample_specific_params = SampleConfig.get_param_names()
         for param in pipeline.get_param_names():
             if param in sample_specific_params and cls.baseTask is setupProject:
                 delattr(cls,param)
@@ -87,7 +88,10 @@ class PipelineWrapper(WrapperTask):
                     yield task(
                         sampleDir = sampleDir,
                         outfileDir = outfileDir,
-                         **{k:self.param_kwargs[k] for k in task.get_param_names()}
+                         **{
+                             k:self.param_kwargs[k]
+                             for k in set(task.get_param_names()) - sample_specific_params
+                             }
                     )
             # General project tasks    
             elif issubclass(task,Task) and task is not self.baseTask:
