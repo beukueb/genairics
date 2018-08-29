@@ -5,7 +5,8 @@ For help on settings run `GAX_PIPEX=genairics.pipelines.bacterial.salmonella.Sal
 """
 from genairics import pb
 from genairics.tasks import setupProject, setupSequencedSample
-from genairics.datasources import DataSource, mergeSampleFASTQs
+from genairics.datasources import DataSource
+from genairics.tasks.sample.preprocessing import PrepareFASTQs
 from genairics.tasks.sample.qc import QualityCheck
 
 #Pipeline
@@ -26,7 +27,7 @@ class SalmonellaProject(pb.PipelineWrapper):
         
         with self.sample_context() as sample_context:
             yield setupSequencedSample
-            yield mergeSampleFASTQs
+            yield PrepareFASTQs
             yield QualityCheck
 
 SalmonellaProject.inherit_task_parameters()

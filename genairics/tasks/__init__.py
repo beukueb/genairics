@@ -1,5 +1,9 @@
 #-*- coding: utf-8 -*-
-"""genairics custom task classes
+"""genairics custom task classes.
+The tasks in the sample and project subpackages,
+should only inherit and not require other tasks,
+as they are intended to be used in genairics.pb.PipelineWrapper
+classes, which will coordinate the requirements.
 
 Usually subclasses luigi.Task
 """
