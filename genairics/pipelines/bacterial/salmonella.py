@@ -6,7 +6,7 @@ For help on settings run `GAX_PIPEX=genairics.pipelines.bacterial.salmonella.Sal
 from genairics import pb
 from genairics.tasks import setupProject, setupSequencedSample
 from genairics.datasources import DataSource, mergeSampleFASTQs
-from genairics.tasks.qc import QualityCheck
+from genairics.tasks.sample.qc import QualityCheck
 
 #Pipeline
 # Sample level
