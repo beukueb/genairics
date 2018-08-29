@@ -25,6 +25,9 @@ class SalmonellaProject(pb.PipelineWrapper):
         yield DataSource
         
         with self.sample_context() as sample_context:
-            yield SalmonellaSample
+            #yield SalmonellaSample
+            yield setupSequencedSample
+            yield mergeSampleFASTQs
+            yield QualityCheck
 
 SalmonellaProject.inherit_task_parameters()

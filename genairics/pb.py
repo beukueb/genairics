@@ -78,12 +78,15 @@ class PipelineWrapper(Pipeline):
         yield self.clone(self.baseTask)
         self.previousTask = self.baseTask
         for task in self.tasks():
+            # Inherit from previousTask and set for next
+            task = requires(self.previousTask)(task)
+            self.previousTask = task
+            
             # Sample context specific task
             if hasattr(self,'active_context'):
                 # TODO inheritance is not yet dealt with for sample specific task
                 # within context. For now make a SamplePipelineWrapper to use in the
                 # context as a single task
-                task = requires(self.previousTask)(task)
                 for sampleDir, outfileDir in self.sample_generator():
                     yield task(
                         sampleDir = sampleDir,
@@ -95,9 +98,7 @@ class PipelineWrapper(Pipeline):
                     )
             # General project tasks    
             elif issubclass(task,Task) and task is not self.baseTask:
-                task = requires(self.previousTask)(task)
                 yield self.clone(task)
-                self.previousTask = task
 
     # Sample context management
     def sample_context(self):
