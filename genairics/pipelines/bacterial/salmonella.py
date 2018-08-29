@@ -10,13 +10,13 @@ from genairics.tasks.qc import QualityCheck
 
 #Pipeline
 # Sample level
-class SalmonellaSample(pb.SamplePipelineWrapper):
-    def tasks(self):
-        yield setupSequencedSample
-        yield mergeSampleFASTQs
-        yield QualityCheck
+# class SalmonellaSample(pb.SamplePipelineWrapper):
+#     def tasks(self):
+#         yield setupSequencedSample
+#         yield mergeSampleFASTQs
+#         yield QualityCheck
 
-SalmonellaSample.inherit_task_parameters()
+# SalmonellaSample.inherit_task_parameters()
 
 # Project level
 class SalmonellaProject(pb.PipelineWrapper):
@@ -25,7 +25,6 @@ class SalmonellaProject(pb.PipelineWrapper):
         yield DataSource
         
         with self.sample_context() as sample_context:
-            #yield SalmonellaSample
             yield setupSequencedSample
             yield mergeSampleFASTQs
             yield QualityCheck
