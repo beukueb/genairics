@@ -17,6 +17,7 @@ class QualityCheck(SampleTask):
         return pb.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
 
     def run(self):
+        from plumbum import local
         tmpdir = self.output().path+'_tmp'
         os.mkdir(tmpdir)
         stdout = local['fastqc'](
