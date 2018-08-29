@@ -5,6 +5,7 @@ for quality control tasks
 from genairics import pb
 from genairics.tasks import SampleTask
 from genairics.config import config
+import os
 
 class QualityCheck(SampleTask):
     """Check the quality of a single sample
@@ -16,7 +17,6 @@ class QualityCheck(SampleTask):
         return pb.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
 
     def run(self):
-        import os
         tmpdir = self.output().path+'_tmp'
         os.mkdir(tmpdir)
         stdout = local['fastqc'](
