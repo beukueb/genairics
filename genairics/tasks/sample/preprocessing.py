@@ -37,7 +37,7 @@ class PrepareFASTQs(pb.Task):
                 )
             )
         )
-        infile2Target = luigi.LocalTarget(
+        infile2Target = pb.LocalTarget(
             os.path.join(
                 self.outfileDir,
                 '{}_R2.fastq.gz'.format(os.path.basename(self.sampleDir))
