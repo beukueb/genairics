@@ -5,7 +5,7 @@ and setting them up for processing
 """
 from genairics import pb
 from plumbum import local
-import os
+import os, glob
 
 class PrepareFASTQs(pb.Task):
     """
