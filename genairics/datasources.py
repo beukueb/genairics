@@ -51,6 +51,12 @@ Providers: `file`, `basespace`, `ena`, `rsync`
             # In case the data is a local file path, the directory is linked to the datadir
             location = os.path.realpath(location)
             os.symlink(location,self.output().path)
+        elif provider == 'rsync':
+            rsyncsrc = RsyncSource(
+                remoteSource = location,
+                **self.projectSetupParams
+            )
+            rsyncsrc.run()
         elif provider == 'basespace':
             bssource = BaseSpaceSource(
                 NSQrun = location,
