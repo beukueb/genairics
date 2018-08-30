@@ -9,7 +9,7 @@ Todo:
 
 import luigi, logging, os, sys, itertools, glob, pathlib
 from luigi.util import inherits, requires
-from plumbum import local
+from plumbum import local, FG
 from genairics import config, setupProject, setupSequencedSample
 from genairics.resources import RetrieveGenome
 
@@ -26,11 +26,12 @@ class DataSource(luigi.Task):
         file:///file/path => simple file path location of a directory containing the raw data.
         basespace://NSQRun => NSQRun identifier.
         ena://projectID => ENA project ID.
+        rsync://remote/location => what you would use as source in rsync command
     """
     source = luigi.Parameter('',
         description = '''Data location. Format should be [provider://]path
 If no provider, it is assumed to be a file path location. 
-Providers: `file`, `basespace`
+Providers: `file`, `basespace`, `ena`, `rsync`
 '''
     )
     
@@ -77,6 +78,23 @@ Providers: `file`, `basespace`
         }
     
 # Specific data collecting tasks
+## rsync
+@inherits(setupProject)
+class RsyncSource(luigi.Task):
+    """rsync a remote source
+    that will serve as the data source for the pipeline
+    """
+    remoteSource = luigi.Parameter('',description='the source in an rsync command')
+
+    def output(self):
+        return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
+
+    def run(self):
+        tmpdir = self.output().path+'_rsyncing'
+        if not os.path.exists(tmpdir): os.mkdir(tmpdir)
+        local['rsync']['-avz',self.remoteSource,tmpdir] & FG
+        os.rename(tmpdir,self.output().path)
+    
 ## Illumina
 @inherits(setupProject)
 class BaseSpaceSource(luigi.Task):

@@ -8,6 +8,7 @@ from genairics.tasks import setupProject, setupSequencedSample
 from genairics.datasources import DataSource
 from genairics.tasks.sample.preprocessing import PrepareFASTQs
 from genairics.tasks.sample.qc import QualityCheck
+from genairics.tasks.sample.mapping import Bowtie2align
 
 #Pipeline
 # Sample level
@@ -29,5 +30,6 @@ class SalmonellaProject(pb.PipelineWrapper):
             yield setupSequencedSample
             yield PrepareFASTQs
             yield QualityCheck
+            yield Bowtie2align
 
 SalmonellaProject.inherit_task_parameters()
