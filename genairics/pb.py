@@ -126,7 +126,9 @@ class PipelineWrapper(Pipeline):
                     )
                     return self.sample_generator
                 else:
-                    raise Exception('Dynamic dependency not yet met, cannot provide sample directories.')
+                    self.sample_generator = lambda: []
+                    return [None]
+                    #raise Exception('Dynamic dependency not yet met, cannot provide sample directories.')
             else: # Parameters are not yet inherited,
                 # return a stub to expose sample tasks for inheritance
                 return [None]
