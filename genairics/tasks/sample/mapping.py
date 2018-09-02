@@ -29,11 +29,13 @@ class Bowtie2align(SampleTask):
             '-p', config.threads,
             '-x', os.path.join(self.required_resources().path,self.genome),)+
             (
-                ('-U', self.input()[0].path) if not self.pairedEnd else
-                ('-1', self.input()[0].path, '-2', self.input()[1].path)
+                ('-U', self.input()['fastqs'][0].path) if not self.pairedEnd else
+                ('-1', self.input()['fastqs'][0].path, '-2', self.input()['fastqs'][1].path)
             )
-        ] | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output().path)()
+        ] | local['samtools']['view', '-q', 4, '-Sbh', '-'] > self.output()['bam'].path)()
         if stdout: logger.info(stdout)
 
     def output(self):
-        return pb.LocalTarget(os.path.join(self.outfileDir,'alignment.bam'))
+        return {
+            'bam': pb.LocalTarget(os.path.join(self.outfileDir,'alignment.bam'))
+        }

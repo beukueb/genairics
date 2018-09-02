@@ -24,7 +24,14 @@ class ProjectMixin(object):
         return self.clone(setupProject).logger
 
     @property
-    def projectdir(self):
+    def projectdata(self):
+        return os.path.join(
+            self.datadir,
+            self.project
+        )    
+
+    @property
+    def projectresults(self):
         return os.path.join(
             self.resultsdir,
             self.project

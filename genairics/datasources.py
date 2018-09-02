@@ -12,6 +12,7 @@ from luigi.util import inherits, requires
 from plumbum import local, FG
 from genairics import config, setupProject, setupSequencedSample
 from genairics.resources import RetrieveGenome
+from genairics.tasks import ProjectTask
 
 # Basic data collecting task
 @requires(setupProject)
@@ -223,6 +224,40 @@ class ENAsource(luigi.Task):
         os.rename(outtempdir,self.output().path)
 
 # Raw data preprocessing
+class Sample2Dir(ProjectTask):
+    """If the data source has all sample files in one directory,
+    this task reorganises them based on a regex, everything that
+    does not match the regex is put in a `.nomatch` subfolder.
+    """
+    reorgregex = luigi.Parameter(
+        '',
+        description = '''Regex that will be used for reorganizing 
+sample files in sample dirs if provided, e.g. '(?P<sample>sample\d+)_not_used_in_dir_samle_name'
+Files belonging to the same sample should have the same sample group.'''
+    )
+
+    def run(self):
+        import os, re, glob
+        tmpdir = self.projectdata + '_tmp'
+        os.mkdir(tmpdir)
+        nomatchdir = os.path.join(tmpdir,'.nomatch')
+        if self.reorgregex:
+            reorgregex = re.compile(self.reorgregex)
+            for f in glob.glob(os.path.join(self.projectdata,'*')):
+                filename = os.path.basename(f)
+                match = reorgregex.search(filename):
+                if match:
+                    samplegroup = match.groupdict()['sample']
+                    sampledir = os.path.join(tmpdir,samplegroup)
+                    if not os.path.exists(sampledir): os.mkdir(sampledir)
+                    os.rename(f, os.path.join(sampledir,filename))
+                else:
+                    if not os.path.exists(nomatchdir): os.mkdir(nomatchdir)
+                    os.rename(f, os.path.join(nomatchdir,filename))
+            os.rmdir(self.projectdata)
+            os.rename(tmpdir,self.projectdata)
+        self.touchCheckpoint()
+
 @requires(BaseSpaceSource)
 class mergeFASTQs(luigi.Task):
     """

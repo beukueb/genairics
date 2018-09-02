@@ -11,22 +11,12 @@ from genairics.tasks.sample.qc import QualityCheck
 from genairics.tasks.sample.mapping import Bowtie2align
 
 #Pipeline
-# Sample level
-# class SalmonellaSample(pb.SamplePipelineWrapper):
-#     def tasks(self):
-#         yield setupSequencedSample
-#         yield mergeSampleFASTQs
-#         yield QualityCheck
-
-# SalmonellaSample.inherit_task_parameters()
-
-# Project level
 class SalmonellaProject(pb.PipelineWrapper):
     def tasks(self):
         yield setupProject
         yield DataSource
         
-        with self.sample_context() as sample_context:
+        with self.sample_context():
             yield setupSequencedSample
             yield PrepareFASTQs
             yield QualityCheck

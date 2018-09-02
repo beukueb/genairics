@@ -14,16 +14,19 @@ class QualityCheck(SampleTask):
     Should inherit (in)directly from setupSequencedSample
     """
     def output(self):
-        return pb.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
-
+        return {
+            'fastqs': self.input()['fastqs'], # shuttles through the fastqs
+            'qc': pb.LocalTarget(os.path.join(self.outfileDir,'QCresults'))
+        }
+    
     def run(self):
         from plumbum import local
-        tmpdir = self.output().path+'_tmp'
+        tmpdir = self.output()['qc'].path+'_tmp'
         os.mkdir(tmpdir)
         stdout = local['fastqc'](
             '-o', tmpdir,
             '-t', config.threads,
-            self.input()[0].path,
-            *((self.input()[1].path,) if self.pairedEnd else ())
+            self.input()['fastqs'][0].path,
+            *((self.input()['fastqs'][1].path,) if self.pairedEnd else ())
         )
-        os.rename(tmpdir,self.output().path)
+        os.rename(tmpdir,self.output()['qc'].path)

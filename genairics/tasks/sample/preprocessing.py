@@ -43,18 +43,20 @@ class PrepareFASTQs(pb.Task):
                 '{}_R2.fastq.gz'.format(os.path.basename(self.sampleDir))
             )
         ) if self.pairedEnd else None
-        return (infile1Target,infile2Target) if self.pairedEnd else (infile1Target,)
-
+        return {
+            'fastqs': (infile1Target,infile2Target) if self.pairedEnd else (infile1Target,)
+        }
+    
     def run(self):
         if self.pairedEnd: #if paired-end
-            (local['cat'] > self.output()[0].path+'_tmp')(
+            (local['cat'] > self.output()['fastqs'][0].path+'_tmp')(
                 *glob.glob(os.path.join(self.sampleDir,'*{}*.fastq.gz'.format(self.pairedEndFile1Marker)))
             )
-            (local['cat'] > self.output()[1].path)(
+            (local['cat'] > self.output()['fastqs'][1].path)(
                 *glob.glob(os.path.join(self.sampleDir,'*{}*.fastq.gz'.format(self.pairedEndFile2Marker)))
             )
         else: #if single-end or treated as such
-            (local['cat'] > self.output()[0].path+'_tmp')(
+            (local['cat'] > self.output()['fastqs'][0].path+'_tmp')(
                 *glob.glob(os.path.join(self.sampleDir,'*.fastq.gz'))
             )
-        os.rename(self.output()[0].path+'_tmp', self.output()[0].path)
+        os.rename(self.output()['fastqs'][0].path+'_tmp', self.output()[0].path)

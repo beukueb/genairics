@@ -7,7 +7,7 @@ in genairics config file 'resourcedir' option
 from datetime import datetime, timedelta
 import luigi, os, sys, tempfile, pathlib, glob
 from luigi.util import inherits, requires
-from plumbum import local, colors
+from plumbum import local, colors, FG
 import logging
 
 from genairics import config, gscripts
@@ -123,7 +123,7 @@ class RetrieveGenome(luigi.Task):
     """
     Prepares the genome
     """
-    genome = luigi.Parameter(default='homo_sapiens',description="genome species name")
+    genome = luigi.Parameter(default='homo_sapiens', description="genome species name")
     release = luigi.IntParameter(default=91,
                                  description=
 """ensembl release number of genome
@@ -132,24 +132,35 @@ for homo_sapiens, use the following :
  75 => GRCh37 aka hg19
 """
     )
-
+    speciesGroup = luigi.Parameter(default='model_organisms', description='Choose from: model_organisms, bacteria')
+    genomeType = luigi.Parameter(
+        default='primary_assembly',
+        description='Choose from: toplevel, primary_assembly. Some mappers cannot work with `toplevel`'
+    )
+    
     def output(self):
         return luigi.LocalTarget(
             os.path.join(resourcedir,'ensembl',self.genome,'release-{}'.format(self.release))
         )
 
     def run(self):
+        # Species
+        if self.speciesGroup == 'model_organisms':
+            ensemblBaseURL = 'http://ftp.ensembl.org/pub/'
+        elif self.speciesGroup == 'bacteria':
+            ensemblBaseURL = 'http://ftp.ensemblgemomes.org/pub/bacteria/'
+            
         #Make temp dir for data
-        local['mkdir']('-p',self.output().path+'_retrieving/dna')
-        local['mkdir']('-p',self.output().path+'_retrieving/annotation')
+        local['mkdir']['-p',self.output().path+'_retrieving/dna'] &FG
+        local['mkdir']['-p',self.output().path+'_retrieving/annotation'] &FG
         requestFiles(
-            'http://ftp.ensembl.org/pub/release-{release}/fasta/{species}/dna/'.format(
+            ensemblBaseURL+'release-{release}/fasta/{species}/dna/'.format(
                 species=self.genome, release=self.release),
-            r'.+.dna.chromosome.+.fa.gz',
+            r'.+.dna.'+self.genomeType+'.fa.gz', #r'.+.dna.chromosome.+.fa.gz',
             self.output().path+'_retrieving/dna'
         )
         requestFiles(
-            'http://ftp.ensembl.org/pub/release-{release}/gtf/{species}/'.format(
+            ensemblBaseURL+'release-{release}/gtf/{species}/'.format(
                 species=self.genome, release=self.release),
             r'.+.{release}.gtf.gz'.format(release=self.release),
             self.output().path+'_retrieving/annotation'
