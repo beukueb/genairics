@@ -245,7 +245,7 @@ Files belonging to the same sample should have the same sample group.'''
             reorgregex = re.compile(self.reorgregex)
             for f in glob.glob(os.path.join(self.projectdata,'*')):
                 filename = os.path.basename(f)
-                match = reorgregex.search(filename):
+                match = reorgregex.search(filename)
                 if match:
                     samplegroup = match.groupdict()['sample']
                     sampledir = os.path.join(tmpdir,samplegroup)
