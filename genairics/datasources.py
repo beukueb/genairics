@@ -249,6 +249,24 @@ Files belonging to the same sample should have the same sample group.'''
     def output(self):
         return self.CheckpointTarget()
 
+class CompressData(ProjectTask):
+    """Compresses all files in the project data folder
+    if they are not yet compressed, except for files or
+    directories starting with `.`
+    """
+    def run(self):
+        import os
+        from plumbum import local
+        for dirpath, dirnames, filenames in os.walk(self.projectdata):
+            if '/.' in dirpath: continue # not processing any directory having upstream dir starting with `.`
+            for filename in filenames:
+                if not filename.endswith('.gz') and not filename.startswith('.'):
+                    local['gzip']['-v', os.path.join(dirpath,filename)]
+        self.touchCheckpoint()
+    
+    def output(self):
+        return self.CheckpointTarget()    
+
 @requires(BaseSpaceSource)
 class mergeFASTQs(luigi.Task):
     """
