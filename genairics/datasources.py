@@ -256,12 +256,12 @@ class CompressData(ProjectTask):
     """
     def run(self):
         import os
-        from plumbum import local
+        from plumbum import local, FG
         for dirpath, dirnames, filenames in os.walk(self.projectdata):
             if '/.' in dirpath: continue # not processing any directory having upstream dir starting with `.`
             for filename in filenames:
                 if not filename.endswith('.gz') and not filename.startswith('.'):
-                    local['gzip']['-v', os.path.join(dirpath,filename)]
+                    local['gzip']['-v', os.path.join(dirpath,filename)] & FG
         self.touchCheckpoint()
     
     def output(self):
