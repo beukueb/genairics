@@ -74,6 +74,7 @@ def prepareParser():
     parser.add_argument('--remote-host', default = '', type = str, help = 'submit job through ssh')
     parser.add_argument('--save-config', action = 'store_true',
                         help = 'save path related default values to a configuration file in the directory where you started genairics')
+    parser.add_argument('--debug', action = 'store_true', help = 'Return console with pipeline in environment for debugging')
     parser.add_argument('--verbose', action = 'store_true', help = 'verbose output')
 
     # Pipeline subparsers
@@ -173,13 +174,18 @@ def main(args=None):
     clusterQ = args.pop('cluster_Q')
     clusterPPN = args.pop('cluster_PPN')
     verbose = args.pop('verbose')
+    debug = args.pop('debug')
     workflow = args.pop('function')(**args)
 
     if verbose:
         logger.setLevel(logging.DEBUG)
     else: logger.setLevel(logging.INFO)
     
-    if joblauncher:
+    if debug:
+        import IPython
+        IPython.embed()
+        exit()
+    elif joblauncher:
         logger.debug('submitting %s to %s',workflow,joblauncher)
         joblauncher(
             job=workflow,remote=remotehost,

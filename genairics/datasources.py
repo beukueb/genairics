@@ -15,8 +15,7 @@ from genairics.resources import RetrieveGenome
 from genairics.tasks import ProjectTask
 
 # Basic data collecting task
-@requires(setupProject)
-class DataSource(luigi.Task):
+class DataSource(ProjectTask):
     """Data source task
 
     Defines a parameter that specifies where the original data is located.
@@ -37,7 +36,7 @@ Providers: `file`, `basespace`, `ena`, `rsync`
     )
     
     def output(self):
-        return luigi.LocalTarget(os.path.join(self.datadir,self.project))
+        return luigi.LocalTarget(self.projectdata)
 
     def run(self):
         import re
@@ -72,17 +71,6 @@ Providers: `file`, `basespace`, `ena`, `rsync`
             enasource.run()
         else:
             raise Exception('Provider "{}" unknown'.format(provider))
-
-    @property
-    def projectSetupParams(self):
-        """Returns the setupProject param dict
-        for intantiating other datasource tasks
-        """
-        sp = self.clone_parent()
-        return {
-            p:sp.__getattribute__(p)
-            for p in sp.get_param_names()
-        }
     
 # Specific data collecting tasks
 ## rsync

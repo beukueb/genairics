@@ -100,6 +100,17 @@ class ProjectTask(luigi.Task,ProjectMixin):
             file.log(level,stdout.getvalue())
         return printfunction
 
+    @property
+    def projectSetupParams(self):
+        """Returns the setupProject param dict
+        for intantiating other datasource tasks
+        """
+        sp = self.clone_parent()
+        return {
+            p:sp.__getattribute__(p)
+            for p in sp.get_param_names()
+        }
+
     def CheckpointTarget(self):
         return luigi.LocalTarget(
             os.path.join(
