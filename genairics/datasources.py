@@ -246,6 +246,9 @@ Files belonging to the same sample should have the same sample group.'''
             os.rename(tmpdir,self.projectdata)
         self.touchCheckpoint()
 
+    def output(self):
+        return self.CheckpointTarget()
+
 @requires(BaseSpaceSource)
 class mergeFASTQs(luigi.Task):
     """
