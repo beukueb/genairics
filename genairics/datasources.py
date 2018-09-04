@@ -255,13 +255,18 @@ class CompressData(ProjectTask):
     directories starting with `.`
     """
     def run(self):
-        import os
-        from plumbum import local, FG
+        import os, gzip, shutil
         for dirpath, dirnames, filenames in os.walk(self.projectdata):
             if '/.' in dirpath: continue # not processing any directory having upstream dir starting with `.`
             for filename in filenames:
                 if not filename.endswith('.gz') and not filename.startswith('.'):
-                    local['gzip']['-v', os.path.join(dirpath,filename)] & FG
+                    #local['gzip']['-vf', os.path.join(dirpath,filename)] # ISSUE -> asks for user input
+                    fullfname = os.path.join(dirpath,filename)
+                    with open(fullfname,'rb') as f_in:
+                        with gzip.open(fullfname+'.gz','wb') as f_in:
+                            shutil.copyfileobj(f_in,f_out)
+                    os.unlink(fullfname)
+                    self.print('Compressed',fullfname)
         self.touchCheckpoint()
     
     def output(self):
