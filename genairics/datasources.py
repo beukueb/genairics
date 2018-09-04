@@ -263,7 +263,7 @@ class CompressData(ProjectTask):
                     #local['gzip']['-vf', os.path.join(dirpath,filename)] # ISSUE -> asks for user input
                     fullfname = os.path.join(dirpath,filename)
                     with open(fullfname,'rb') as f_in:
-                        with gzip.open(fullfname+'.gz','wb') as f_in:
+                        with gzip.open(fullfname+'.gz','wb') as f_out:
                             shutil.copyfileobj(f_in,f_out)
                     os.unlink(fullfname)
                     self.print('Compressed',fullfname)
