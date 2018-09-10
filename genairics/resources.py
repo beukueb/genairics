@@ -221,8 +221,8 @@ for homo_sapiens, use the following :
                 base = ensemblBasePath,
                 release = self.release,
                 collection = collection,
-                species = species,
-                Species = species.capitalize(),
+                species = self.species,
+                Species = self.species.capitalize(),
                 accession = assembly_accession,
                 type = self.genomeType
             )
