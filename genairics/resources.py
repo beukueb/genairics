@@ -132,10 +132,10 @@ for homo_sapiens, use the following :
  75 => GRCh37 aka hg19
 """
     )
-    speciesGroup = luigi.Parameter(default='model_organisms', description='Choose from: model_organisms, bacteria')
     genomeType = luigi.Parameter(
         default='primary_assembly',
-        description='Choose from: toplevel, primary_assembly. Some mappers cannot work with `toplevel`'
+        description='Choose from: toplevel, primary_assembly. Some mappers cannot work with `toplevel`. '+
+        'For some genomes only `toplevel` is available'
     )
     
     def output(self):
@@ -144,24 +144,52 @@ for homo_sapiens, use the following :
         )
 
     def run(self):
-        # Species
-        if self.speciesGroup == 'model_organisms':
+        import requests
+
+        # Species settings -> determine to which group the species belongs
+        headers = {'content-type':'application/json'}
+        r = requests.get(
+            'http://rest.ensembl.org/info/assembly/' + self.species,
+            headers = headers
+        )
+        if not 'error' in r.json():
+            speciesGroup = 'model_organisms'
+            collection = ''
             ensemblBaseURL = 'http://ftp.ensembl.org/pub/'
-        elif self.speciesGroup == 'bacteria':
-            ensemblBaseURL = 'http://ftp.ensemblgemomes.org/pub/bacteria/'
+        else:
+            r = requests.get(
+                'http://rest.ensemblgenomes.org/info/assembly/' + self.species,
+                headers = headers
+            )
+            if 'error' in r.json(): raise KeyError('Species %s not known in ensembl' % self.species)
+            assembly = r.json()
+            assembly_accession = r.json()['assembly_accession']
+            # For non model organism, more information is needed to find the location where the genome is stored
+            r = requests.get(
+                'http://rest.ensemblgenomes.org/info/genomes/assembly/' + assembly_accession,
+                headers = headers
+            )
+            speciesGroup = r.json()['division'].lower().replace('ensembl','')
+            try:
+                collection = r.json()['dbname']
+                collection = collection[:collection.index('_core_')]
+                if collection == self.species: collection = ''
+                else: collection += '/' #as it will be inserted in url path
+            except KeyError: collection = ''
+            ensemblBaseURL = 'http://ftp.ensemblgemomes.org/pub/{}/'.format(speciesGroup)
             
         #Make temp dir for data
         local['mkdir']['-p',self.output().path+'_retrieving/dna'] &FG
         local['mkdir']['-p',self.output().path+'_retrieving/annotation'] &FG
         requestFiles(
-            ensemblBaseURL+'release-{release}/fasta/{species}/dna/'.format(
-                species=self.genome, release=self.release),
+            ensemblBaseURL+'release-{release}/fasta/{collection}{species}/dna/'.format(
+                species = self.genome, collection = collection, release = self.release),
             r'.+.dna.'+self.genomeType+'.fa.gz', #r'.+.dna.chromosome.+.fa.gz',
             self.output().path+'_retrieving/dna'
         )
         requestFiles(
-            ensemblBaseURL+'release-{release}/gtf/{species}/'.format(
-                species=self.genome, release=self.release),
+            ensemblBaseURL+'release-{release}/gtf/{collection}{species}/'.format(
+                species = self.genome, collection = collection, release = self.release),
             r'.+.{release}.gtf.gz'.format(release=self.release),
             self.output().path+'_retrieving/annotation'
         )
