@@ -140,7 +140,7 @@ for homo_sapiens, use the following :
     
     def output(self):
         return luigi.LocalTarget(
-            os.path.join(resourcedir,'ensembl',self.genome,'release-{}'.format(self.release))
+            os.path.join(resourcedir,'ensembl',self.species,'release-{}'.format(self.release))
         )
 
     def run(self):
@@ -183,13 +183,13 @@ for homo_sapiens, use the following :
         local['mkdir']['-p',self.output().path+'_retrieving/annotation'] &FG
         requestFiles(
             ensemblBaseURL+'release-{release}/fasta/{collection}{species}/dna/'.format(
-                species = self.genome, collection = collection, release = self.release),
+                species = self.species, collection = collection, release = self.release),
             r'.+.dna.'+self.genomeType+'.fa.gz', #r'.+.dna.chromosome.+.fa.gz',
             self.output().path+'_retrieving/dna'
         )
         requestFiles(
             ensemblBaseURL+'release-{release}/gtf/{collection}{species}/'.format(
-                species = self.genome, collection = collection, release = self.release),
+                species = self.species, collection = collection, release = self.release),
             r'.+.{release}.gtf.gz'.format(release=self.release),
             self.output().path+'_retrieving/annotation'
         )
