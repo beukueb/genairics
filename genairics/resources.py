@@ -170,7 +170,8 @@ for homo_sapiens, use the following :
             )
             if 'error' in r.json(): raise KeyError('Species %s not known in ensembl' % self.species)
             assembly = r.json()
-            assembly_accession = r.json()['assembly_accession']
+            assembly_accession = assembly['assembly_accession']
+            assembly_name = assembly['assembly_name']
             
             # For non model organism, more information is needed to find the location where the genome is stored
             r = requests.get(
@@ -208,22 +209,22 @@ for homo_sapiens, use the following :
         else: # For ensemgenomes.org species, ftp protocol is necessary
             import ftplib
             from contextlib import closing
-            genome_resource = '{base}/release-{release}/fasta/{collection}{species}/{Species}.{accession}.dna.{type}.fa.gz'.format(
+            genome_resource = '{base}/release-{release}/fasta/{collection}{species}/dna/{Species}.{assembly}.dna.{type}.fa.gz'.format(
                 base = ensemblBasePath,
                 release = self.release,
                 collection = collection,
                 species = self.species,
                 Species = self.species.capitalize(),
-                accession = assembly_accession,
+                assembly = assembly_name,
                 type = self.genomeType
             )
-            annotation_resource = '{base}/release-{release}/gtf/{collection}{species}/{Species}.{accession}.{release}.gtf.gz'.format(
+            annotation_resource = '{base}/release-{release}/gtf/{collection}{species}/{Species}.{assembly}.{release}.gtf.gz'.format(
                 base = ensemblBasePath,
                 release = self.release,
                 collection = collection,
                 species = self.species,
                 Species = self.species.capitalize(),
-                accession = assembly_accession,
+                assembly = assembly_name,
                 type = self.genomeType
             )
             with closing(ftplib.FTP(ensemblFTPhost)) as ftp:
