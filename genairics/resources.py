@@ -33,13 +33,20 @@ def requestFiles(urlDir,fileregex,outdir):
     if fileregex: fileregex = re.compile(fileregex)
     if not urlDir.endswith('/'): urlDir+='/'
     # Download checksums if present
-    checksums = requests.get(urlDir+'CHECKSUMS')
-    if checksums:
-        from io import StringIO
-        import pandas as pd
-        checksums = pd.read_table(StringIO(checksums.text),sep='\s+',
-                                  names=['checksum', 'octets', 'name'],index_col='name')
-    else: checksums = None
+    try:
+        checksums = requests.get(urlDir+'CHECKSUMS')
+        if checksums:
+            from io import StringIO
+            import pandas as pd
+            checksums = pd.read_table(
+                StringIO(checksums.text),sep='\s+',
+                names=['checksum', 'octets', 'name'],index_col='name'
+            )
+        else: checksums = None
+    except requests.exceptions.ConnectionError:
+        logresources.warning('No checksums for %s', urlDir)
+        checksums = None
+        
     # Retrieve index
     r = requests.get(urlDir)
     for l in link.finditer(r.text):
