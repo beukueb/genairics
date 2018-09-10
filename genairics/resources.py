@@ -123,7 +123,7 @@ class RetrieveGenome(luigi.Task):
     """
     Prepares the genome
     """
-    genome = luigi.Parameter(default='homo_sapiens', description="genome species name")
+    species = luigi.Parameter(default='homo_sapiens', description="genome species name")
     release = luigi.IntParameter(default=91,
                                  description=
 """ensembl release number of genome
