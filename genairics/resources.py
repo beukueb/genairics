@@ -171,6 +171,7 @@ for homo_sapiens, use the following :
             if 'error' in r.json(): raise KeyError('Species %s not known in ensembl' % self.species)
             assembly = r.json()
             assembly_accession = r.json()['assembly_accession']
+            
             # For non model organism, more information is needed to find the location where the genome is stored
             r = requests.get(
                 'http://rest.ensemblgenomes.org/info/genomes/assembly/' + assembly_accession,
@@ -183,23 +184,55 @@ for homo_sapiens, use the following :
                 if collection == self.species: collection = ''
                 else: collection += '/' #as it will be inserted in url path
             except KeyError: collection = ''
-            ensemblBaseURL = 'http://ftp.ensemblgemomes.org/pub/{}/'.format(speciesGroup)
+            # unlike ensembl.org, ensemblgenomes.org does not work with http protocol for ftp resources
+            ensemblFTPhost = 'ftp.ensemblgenomes.org'
+            ensemblBasePath = '/pub/{}'.format(speciesGroup)
             
         #Make temp dir for data
         local['mkdir']['-p',self.output().path+'_retrieving/dna'] &FG
         local['mkdir']['-p',self.output().path+'_retrieving/annotation'] &FG
-        requestFiles(
-            ensemblBaseURL+'release-{release}/fasta/{collection}{species}/dna/'.format(
-                species = self.species, collection = collection, release = self.release),
-            r'.+.dna.'+self.genomeType+'.fa.gz', #r'.+.dna.chromosome.+.fa.gz',
-            self.output().path+'_retrieving/dna'
-        )
-        requestFiles(
-            ensemblBaseURL+'release-{release}/gtf/{collection}{species}/'.format(
-                species = self.species, collection = collection, release = self.release),
-            r'.+.{release}.gtf.gz'.format(release=self.release),
-            self.output().path+'_retrieving/annotation'
-        )
+
+        if speciesGroup == 'model_organisms':
+            requestFiles(
+                ensemblBaseURL+'release-{release}/fasta/{species}/dna/'.format(
+                    species = self.species, release = self.release),
+                r'.+.dna.'+self.genomeType+'.fa.gz', #r'.+.dna.chromosome.+.fa.gz',
+                self.output().path+'_retrieving/dna'
+            )
+            requestFiles(
+                ensemblBaseURL+'release-{release}/gtf/{species}/'.format(
+                    species = self.species, release = self.release),
+                r'.+.{release}.gtf.gz'.format(release=self.release),
+                self.output().path+'_retrieving/annotation'
+            )
+        else: # For ensemgenomes.org species, ftp protocol is necessary
+            import ftplib
+            from contextlib import closing
+            genome_resource = '{base}/release-{release}/fasta/{collection}{species}/{Species}.{accession}.dna.{type}.fa.gz'.format(
+                base = ensemblBasePath,
+                release = self.release,
+                collection = collection,
+                species = species,
+                Species = species.capitalize(),
+                accession = assembly_accession,
+                type = self.genomeType
+            )
+            annotation_resource = '{base}/release-{release}/gtf/{collection}{species}/{Species}.{accession}.{release}.gtf.gz'.format(
+                base = ensemblBasePath,
+                release = self.release,
+                collection = collection,
+                species = species,
+                Species = species.capitalize(),
+                accession = assembly_accession,
+                type = self.genomeType
+            )
+            with closing(ftplib.FTP(ensemblFTPhost)) as ftp:
+                ftp.login()
+                with open(self.output().path+'_retrieving/dna/'+os.path.basename(genome_resource), 'wb') as fh:
+                    ftp.retrbinary("RETR " + genome_resource, fh.write)
+                with open(self.output().path+'_retrieving/annotation/'+os.path.basename(annotation_resource), 'wb') as fh:
+                    ftp.retrbinary("RETR " + annotation_resource, fh.write)
+                
         #Unzip all files
         local['gunzip'](*glob.glob(self.output().path+'_retrieving/*/*.gz'))
         #Rename temp dir to final/expected output dir
