@@ -24,6 +24,7 @@ class Bowtie2align(SampleTask):
         return index.output()
         
     def run(self):
+        from plumbum import local, FG
         # run bowtie2 and store as bam file with mapping quality already filtered to mapQ 4
         stdout = (local['bowtie2'][(
             '-p', config.threads,
