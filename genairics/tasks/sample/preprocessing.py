@@ -55,6 +55,7 @@ class PrepareFASTQs(pb.Task):
             (local['cat'] > self.output()['fastqs'][1].path)(
                 *glob.glob(os.path.join(self.sampleDir,'*{}*.fastq.gz'.format(self.pairedEndFile2Marker)))
             )
+            os.rename(self.output()['fastqs'][1].path+'_tmp', self.output()[1].path)
         else: #if single-end or treated as such
             (local['cat'] > self.output()['fastqs'][0].path+'_tmp')(
                 *glob.glob(os.path.join(self.sampleDir,'*.fastq.gz'))

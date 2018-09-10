@@ -96,7 +96,9 @@ class ProjectTask(luigi.Task,ProjectMixin):
             """
             from io import StringIO
             stdout = StringIO()
-            print(*args,file=stdout,*kwargs)
+            if not 'end' in kwargs:
+                kwargs['end'] = ''
+            print(*args,file=stdout,**kwargs)
             file.log(level,stdout.getvalue())
         return printfunction
 
