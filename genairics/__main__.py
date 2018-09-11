@@ -188,7 +188,7 @@ def main(args=None):
         print(
             colors.red | 'Debug mode.',
             'Uncompleted tasks for {}'.format(workflow),
-            'can be found in the generator todos.',
+            'can be found in the generator variable `todos`.',
             'To see the first uncompleted task in line:',
             colors.green | '>>> next(todos)',
             sep = '\n'

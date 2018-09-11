@@ -40,3 +40,42 @@ class Bowtie2align(SampleTask):
         return {
             'bam': pb.LocalTarget(os.path.join(self.outfileDir,'alignment.bam'))
         }
+
+# Variant calling
+@pb.inherits(RetrieveGenome)
+class Samtools2variants(SampleTask):
+    def required_resources(self):
+        """
+        Resource dependencies are for now started
+        from within this function, but should be 
+        automated differently in the future
+        """
+        import glob, os
+        genome = self.clone(RetrieveGenome)
+        if not genome.complete(): genome.run()
+        return {
+            'fasta': glob.glob(
+                os.path.join(genome.output().path, 'dna', '*.fa')
+            )[0],
+            'gtf': glob.glob(
+                os.path.join(genome.output().path, 'annotation', '*.gtf')
+            )[0]
+        }
+
+    def run(self):
+        from plumbum import local, FG
+        local['samtools']['sort', self.input()['bam'].path, self.output()['bam'].path[:-4]] &FG # output bam remove .bam with -4
+        local['samtools']['index', self.output()['bam'].path] &FG
+        bcf_filename = os.path.join(os.path.dirname(self.input()['bam'].path), 'variants.raw.bcf')
+        (local['samtools']['mpileup', '-uD', '-f', self.required_resources()['fasta'], self.output()['bam'].path] |
+             local['bcftools']['view', '-bvcg', '-'] > bcf_filename) &FG
+        (local['bcftools']['view', bcf_filename] > self.output()['vcf'].path) &FG
+        (local['bedtools']['intersect', '-a', self.required_resources()['gtf'], '-b', self.output()['vcf'].path, '-wa', '-u']
+             > self.output()['annotated_vcf'].path) &FG
+        
+    def output(self):
+        return {
+            'bam': pb.LocalTarget(os.path.join(self.outfileDir,'alignment.sorted.bam')),
+            'vcf': pb.LocalTarget(os.path.join(self.outfileDir,'variants.vcf')),
+            'annotated_vcf': pb.LocalTarget(os.path.join(self.outfileDir,'variants_annotated.vcf'))
+        }
