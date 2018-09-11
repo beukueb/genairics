@@ -160,8 +160,8 @@ class SamBedFilteringTask(luigi.Task):
             logger.info(stdout)
 
             #Filtering blacklisted genomic regions
-            if self.filterBlacklist and self.genome in {'homo_sapiens'}:
-                blacklist = RetrieveBlacklist(genome=self.genome,release=self.release)
+            if self.filterBlacklist and self.species in {'homo_sapiens'}:
+                blacklist = RetrieveBlacklist(species=self.species,release=self.release)
                 if not blacklist.complete(): blacklist.run()
                 (local['bedtools'][
                     'intersect', '-v', '-abam',

@@ -38,7 +38,7 @@ class Bowtie2MapSample(luigi.Task):
         # run bowtie2 and store as bam file with mapping quality already filtered to mapQ 4
         stdout = (local['bowtie2'][(
             '-p', config.threads,
-            '-x', os.path.join(self.input()['index'][0].path,self.genome),)+
+            '-x', os.path.join(self.input()['index'][0].path,self.species),)+
             (
                 ('-U', self.input()['sample'][0].path) if not self.pairedEnd else
                 ('-1', self.input()['sample'][0].path, '-2', self.input()['sample'][1].path)

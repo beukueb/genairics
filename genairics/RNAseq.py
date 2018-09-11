@@ -154,7 +154,7 @@ class STARsample(luigi.Task):
         stdout = local['STAR'](
             '--runThreadN', config.threads,
             '--genomeDir', resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index'.format(
-                species=self.genome,release=self.release),
+                species=self.species,release=self.release),
             '--readFilesIn', self.input()[0].path,
             *((self.input()[1].path,) if self.pairedEnd else ()),
             *(('--outFilterScoreMinOverLread', 0.3, '--outFilterMatchNminOverLread', 0.3) if self.pairedEnd else ()),
@@ -279,7 +279,7 @@ class RSEMsample(luigi.Task):
             '--forward-prob', self.forwardprob,
             os.path.join(self.input()[0].path,'Aligned.toTranscriptome.out.bam'),
             resourcedir+'/ensembl/{species}/release-{release}/transcriptome_index/{species}'.format(
-                species=self.genome,release=self.release),
+                species=self.species,release=self.release),
             os.path.join(self.input()[0].path,os.path.basename(self.outfileDir))
         )
         if stdout: logger.info('%s output:\n%s',self.task_family,stdout)

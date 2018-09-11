@@ -12,11 +12,11 @@ class test_RNAseq(TestCase):
         self.datadir = os.path.join(self.tempdir,'data')
         os.mkdir(self.datadir)
         os.mkdir(os.path.join(self.tempdir,'results'))
-        self.genome = 'saccharomyces_cerevisiae'
+        self.species = 'saccharomyces_cerevisiae'
         self.basespace_testproject = 'NSQ_Run240'
         self.workflow = RNAseq(datadir=self.datadir,
                                project=self.basespace_testproject,
-                               genome=self.genome)
+                               species=self.species)
 
     def tearDown(self):
         shutil.rmtree(self.datadir)
@@ -25,7 +25,7 @@ class test_RNAseq(TestCase):
     def test_parameterSettings(self):
         workflowstr = str(self.workflow)
         self.assertIn(self.datadir, workflowstr)
-        self.assertIn(self.genome, workflowstr)
+        self.assertIn(self.species, workflowstr)
         self.assertIn(self.basespace_testproject, workflowstr)
 
     def test_runningWorkflow(self):
