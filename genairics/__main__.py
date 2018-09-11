@@ -183,9 +183,16 @@ def main(args=None):
     
     if debug:
         import IPython
+        from plumbum import colors
         todos = workflow.debug_requirements()
-        print('Debug mode. Uncompleted tasks for',workflow,'can be found in the generator todos.')
-        print('To see the first uncompleted task in line:\n>>> next(todos)')
+        print(
+            colors.red | 'Debug mode.',
+            'Uncompleted tasks for {}'.format(workflow),
+            'can be found in the generator todos.',
+            'To see the first uncompleted task in line:',
+            colors.green | '>>> next(todos)',
+            sep = '\n'
+        )
         IPython.embed()
         exit()
     elif joblauncher:
