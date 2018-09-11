@@ -207,9 +207,10 @@ for homo_sapiens, use the following :
                 self.output().path+'_retrieving/annotation'
             )
         else: # For ensemgenomes.org species, ftp protocol is necessary
-            import ftplib
+            import urllib, shutil
             from contextlib import closing
-            genome_resource = '{base}/release-{release}/fasta/{collection}{species}/dna/{Species}.{assembly}.dna.{type}.fa.gz'.format(
+            genome_resource = 'ftp://{host}{base}/release-{release}/fasta/{collection}{species}/dna/{Species}.{assembly}.dna.{type}.fa.gz'.format(
+                host = ensemblFTPhost,
                 base = ensemblBasePath,
                 release = self.release,
                 collection = collection,
@@ -218,7 +219,8 @@ for homo_sapiens, use the following :
                 assembly = assembly_name,
                 type = self.genomeType
             )
-            annotation_resource = '{base}/release-{release}/gtf/{collection}{species}/{Species}.{assembly}.{release}.gtf.gz'.format(
+            annotation_resource = 'ftp://{host}{base}/release-{release}/gtf/{collection}{species}/{Species}.{assembly}.{release}.gtf.gz'.format(
+                host = ensemblFTPhost,
                 base = ensemblBasePath,
                 release = self.release,
                 collection = collection,
@@ -227,12 +229,12 @@ for homo_sapiens, use the following :
                 assembly = assembly_name,
                 type = self.genomeType
             )
-            with closing(ftplib.FTP(ensemblFTPhost)) as ftp:
-                ftp.login()
+            with closing(urllib.request.urlopen(genome_resource)) as r:
                 with open(self.output().path+'_retrieving/dna/'+os.path.basename(genome_resource), 'wb') as fh:
-                    ftp.retrbinary("RETR " + genome_resource, fh.write)
+                    shutil.copyfileobj(r, fh)
+            with closing(urllib.request.urlopen(annotation_resource)) as r:
                 with open(self.output().path+'_retrieving/annotation/'+os.path.basename(annotation_resource), 'wb') as fh:
-                    ftp.retrbinary("RETR " + annotation_resource, fh.write)
+                    shutil.copyfileobj(r, fh)
                 
         #Unzip all files
         local['gunzip'](*glob.glob(self.output().path+'_retrieving/*/*.gz'))
