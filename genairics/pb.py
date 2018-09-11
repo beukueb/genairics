@@ -100,6 +100,22 @@ class PipelineWrapper(Pipeline):
             elif issubclass(task,Task) and task is not self.baseTask:
                 yield self.clone(task)
 
+    def debug_requirements(self,jumpSameClassTasks=True):
+        """yield the first task that needs completion.
+        Add the end returns all task classes that had
+        uncompleted tasks.
+        
+        Args:
+            jumpSameClassTasks (bool): If true, similar uncompleted tasks,
+              are jumped
+        """
+        uncompletedTaskClasses = set()
+        for task in self.requires():
+            if not task.complete() and not (jumpSameClassTasks and type(task) in uncompletedTaskClasses):
+                uncompletedTaskClasses.add(type(task))
+                yield task
+        return uncompletedTaskClasses
+        
     # Sample context management
     def sample_context(self):
         self.active_context = True
