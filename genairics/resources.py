@@ -142,7 +142,7 @@ for homo_sapiens, use the following :
     genomeType = luigi.Parameter(
         default='primary_assembly',
         description='Choose from: toplevel, primary_assembly. Some mappers cannot work with `toplevel`. '+
-        'For some genomes only `toplevel` is available'
+        'For ensemblgenomes.org only `toplevel` is available. Not yet used upstream for specifying index TODO!'
     )
     
     def output(self):
@@ -217,7 +217,7 @@ for homo_sapiens, use the following :
                 species = self.species,
                 Species = self.species.capitalize(),
                 assembly = assembly_name,
-                type = self.genomeType
+                type = 'toplevel' #self.genomeType # primary_assembly does not seem available TODO current solution only hack
             )
             annotation_resource = 'ftp://{host}{base}/release-{release}/gtf/{collection}{species}/{Species}.{assembly}.{release}.gtf.gz'.format(
                 host = ensemblFTPhost,
@@ -227,7 +227,6 @@ for homo_sapiens, use the following :
                 species = self.species,
                 Species = self.species.capitalize(),
                 assembly = assembly_name,
-                type = self.genomeType
             )
             with closing(urllib.request.urlopen(genome_resource)) as r:
                 with open(self.output().path+'_retrieving/dna/'+os.path.basename(genome_resource), 'wb') as fh:
@@ -260,9 +259,9 @@ class RetrieveBlacklist(luigi.Task):
         return luigi.LocalTarget(os.path.join(self.input().path,'blacklist.bed.gz'))
 
     def run(self):
-        if (self.genome, self.release) not in self.availableBlacklists:
-            raise NotImplementedError("blacklist for %s release %s is not available yet within genairics" % (self.genome,self.release))
-        stdout = local['wget'](self.availableBlacklists[(self.genome, self.release)], '-O', self.output().path)
+        if (self.species, self.release) not in self.availableBlacklists:
+            raise NotImplementedError("blacklist for %s release %s is not available yet within genairics" % (self.species,self.release))
+        stdout = local['wget'](self.availableBlacklists[(self.species, self.release)], '-O', self.output().path)
         logresources.info(stdout)
 
 @requires(RetrieveGenome)
@@ -274,11 +273,11 @@ class Bowtie2Index(luigi.Task):
         return (
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index'.format(
-                    species=self.genome,release=self.release))
+                    species=self.species,release=self.release))
             ),
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index/build_completed'.format(
-                    species=self.genome,release=self.release))
+                    species=self.species,release=self.release))
             )
         )
     
@@ -288,7 +287,7 @@ class Bowtie2Index(luigi.Task):
         stdout = local['bowtie2-build'](
             '--threads', config.threads,
             ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
-            os.path.join(self.output()[0].path, self.genome)
+            os.path.join(self.output()[0].path, self.species)
         )
         logresources.info(stdout)
         pathlib.Path(self.output()[1].path).touch()        
@@ -305,11 +304,11 @@ class STARandRSEMindex(luigi.Task):
         return (
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/transcriptome_index'.format(
-                    species=self.genome,release=self.release))
+                    species=self.species,release=self.release))
             ),
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/transcriptome_index/build_completed'.format(
-                    species=self.genome,release=self.release))
+                    species=self.species,release=self.release))
             )
         )
     
@@ -320,7 +319,7 @@ class STARandRSEMindex(luigi.Task):
             *glob.glob(os.path.join(genomeDir,'annotation')+'/*.gtf'),
             config.threads,
             ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
-            os.path.join(self.output()[0].path, self.genome)
+            os.path.join(self.output()[0].path, self.species)
         )
         logresources.info(stdout)
         pathlib.Path(self.output()[1].path).touch()
@@ -342,11 +341,11 @@ class STARindex(luigi.Task):
         return (
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index_overhang{overhang}'.format(
-                    species=self.genome,release=self.release,overhang=self.sjdbOverhang))
+                    species=self.species,release=self.release,overhang=self.sjdbOverhang))
             ),
             luigi.LocalTarget(
                 os.path.join(resourcedir,'ensembl/{species}/release-{release}/genome_index_overhang{overhang}/build_completed'.format(
-                    species=self.genome,release=self.release,overhang=self.sjdbOverhang))
+                    species=self.species,release=self.release,overhang=self.sjdbOverhang))
             )
         )
     
@@ -356,7 +355,7 @@ class STARindex(luigi.Task):
         stdout = local['STAR'](
             '--runThreadN', config.threads,
             '--runMode', 'genomeGenerate',
-            '--genomeDir', os.path.join(self.output()[0].path, self.genome),
+            '--genomeDir', os.path.join(self.output()[0].path, self.species),
             '--genomeFastaFiles', ','.join(glob.glob(os.path.join(genomeDir,'dna')+'/*.fa*')),
             '--sjdbOverhang', self.sjdbOverhang
             
