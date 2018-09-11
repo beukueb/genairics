@@ -21,7 +21,7 @@ class Bowtie2align(SampleTask):
         index = self.clone(Bowtie2Index)
         if not genome.complete(): genome.run()
         if not index.complete(): index.run()
-        return index.output()
+        return index.output()[0] # return index folder
         
     def run(self):
         from plumbum import local, FG
