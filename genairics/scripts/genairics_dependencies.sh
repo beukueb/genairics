@@ -26,6 +26,7 @@ export PATH=$GAX_PREFIX/bin:$PATH
 if [[ -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then 
     if command -v apt-get; then
 	sudo apt-get install -y git unzip rsync default-jre ant fastqc samtools bedtools r-base cmake
+	sudo apt-get install gfortran libblas-dev # deps for R logspline, polyester dependency
     elif command -v yum; then
 	sudo yum install -y git unzip rsync java-1.8.0-openjdk ant samtools BEDTools R cmake
 	#fastqc package not available with yum
@@ -33,6 +34,7 @@ if [[ -v GAX_INSTALL_PLATFORM_PACKAGES ]]; then
 	brew install git rsync java ant fastqc samtools bedtools cmake
 	brew install openblas
 	brew install r --with-openblas
+	brew install gfortran
     fi
 fi
 
@@ -57,7 +59,8 @@ function wrapprogram {
 export R_LIBS=$GAX_PREFIX/Rlibs
 if [[ ! -d $R_LIBS ]]; then
     mkdir $R_LIBS
-    Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))'
+    Rscript -e 'source("http://bioconductor.org/biocLite.R")' -e 'biocLite(c("limma"))' \
+	    -e 'biocLite(c("polyester"))'
 fi
 
 ## fastqc

@@ -69,6 +69,12 @@ Providers: `file`, `basespace`, `ena`, `rsync`
                 **self.projectSetupParams
             )
             enasource.run()
+        elif provider == 'test':
+            testsource = TestSource(
+                testCharacteristics = location,
+                **self.projectSetupParams
+            )
+            testsource.run()
         else:
             raise Exception('Provider "{}" unknown'.format(provider))
     
@@ -210,6 +216,24 @@ class ENAsource(luigi.Task):
                     
         # Rename tempdir to final project name dir
         os.rename(outtempdir,self.output().path)
+
+# Simulated test data
+@inherits(setupProject)
+class TestSource(ProjectTask):
+    """Simulate data for testing pipelines
+    
+    `location` parameter string needs to have the following structure:
+    TODO
+    """
+    testCharacteristics = luigi.Parameter('',description='characteristics of the simulated data')
+
+    def output(self):
+        return luigi.LocalTarget(self.projectdata)
+
+    def run(self):
+        tmpdir = self.output().path+'_creating_test_data'
+        local['rsync']['-avz',self.remoteSource,tmpdir] & FG
+        os.rename(tmpdir,self.output().path)
 
 # Raw data preprocessing
 class Sample2Dir(ProjectTask):

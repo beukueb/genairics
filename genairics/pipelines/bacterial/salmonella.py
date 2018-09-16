@@ -9,6 +9,7 @@ from genairics.datasources import DataSource, Sample2Dir, CompressData
 from genairics.tasks.sample.preprocessing import PrepareFASTQs
 from genairics.tasks.sample.qc import QualityCheck
 from genairics.tasks.sample.mapping import Bowtie2align, Samtools2variants
+from genairics.tasks.project.variants import VariantTree
 
 #Pipeline
 class SalmonellaProject(pb.PipelineWrapper):
@@ -24,5 +25,8 @@ class SalmonellaProject(pb.PipelineWrapper):
             yield QualityCheck
             yield Bowtie2align
             yield Samtools2variants
+
+        #Merging tasks
+        yield VariantTree
 
 SalmonellaProject.inherit_task_parameters()

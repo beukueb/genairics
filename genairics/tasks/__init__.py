@@ -125,6 +125,18 @@ class ProjectTask(luigi.Task,ProjectMixin):
     def touchCheckpoint(self):
         pathlib.Path(self.CheckpointTarget().path).touch()
 
+    def getSampleResultFiles(self,filename):
+        """Get all sample files matching `filename`
+
+        Args:
+            filename (str): File name, can contain wildcards, 
+              and subdirs but should not start with '/'.
+        """
+        import glob, os
+        return glob.glob(
+            os.path.join(self.projectresults,'sampleResults','*',filename)
+        )
+
 ## Individual sample tasks
 class SampleConfig(luigi.Config):
     """Generic sample specific parameters for input and output,

@@ -7,7 +7,7 @@ and thus made available by importing pb from genairics.
 """
 
 # luigi imports
-from luigi import Parameter, BoolParameter, IntParameter, FloatParameter
+from luigi import Parameter, BoolParameter, IntParameter, FloatParameter, ListParameter
 from luigi import Config, Task, LocalTarget, WrapperTask
 from luigi.util import inherits, requires
 
@@ -84,11 +84,8 @@ class PipelineWrapper(Pipeline):
             
             # Sample context specific task
             if hasattr(self,'active_context'):
-                # TODO inheritance is not yet dealt with for sample specific task
-                # within context. For now make a SamplePipelineWrapper to use in the
-                # context as a single task
                 for sampleDir, outfileDir in self.sample_generator():
-                    yield task(
+                    sampleTaskInstance = task(
                         sampleDir = sampleDir,
                         outfileDir = outfileDir,
                          **{
@@ -96,6 +93,13 @@ class PipelineWrapper(Pipeline):
                              for k in set(task.get_param_names()) - sample_specific_params
                              }
                     )
+                    try:
+                        self.active_context[task].append(sampleTaskInstance)
+                    except KeyError:
+                        # This insures that the active_context dictionary
+                        # contains the last sample task run with  all its instances
+                        self.active_context = {task:[sampleTaskInstance]}
+                    yield sampleTaskInstance
             # General project tasks    
             elif issubclass(task,Task) and task is not self.baseTask:
                 yield self.clone(task)
@@ -118,7 +122,7 @@ class PipelineWrapper(Pipeline):
         
     # Sample context management
     def sample_context(self):
-        self.active_context = True
+        self.active_context = {'initiated': True}
         return self
     
     def __enter__(self):
@@ -150,6 +154,9 @@ class PipelineWrapper(Pipeline):
                 return [None]
 
     def __exit__(self, type, value, tb):
+        # Set up new base task for merging tasks that come after the sample context
+        self.previousTask = SampleContextFinished()
+
         del self.active_context, self.sample_generator
         if not tb:
             return True
@@ -157,3 +164,21 @@ class PipelineWrapper(Pipeline):
 
 class SamplePipelineWrapper(SampleTaskMixin,PipelineWrapper):
     baseTask = BaseSampleTask
+
+class SampleContextFinished(ProjectTask):
+    lastSampleTasks = ListParameter([],description='list of last set of sample tasks that should have completed')
+
+    def output(self):
+        return self.CheckpointTarget()
+        
+    def run(self):
+        allCompleted = bool(self.lastSampleTasks) # if empty task list will be false
+        for task in self.lastSampleTasks:
+            if not task.complete():
+                allCompleted = False
+        if allCompleted:
+            self.touchCheckpoint()
+        else:
+            import warnings
+            warnings.warn('No sample tasks have been completed')
+        
