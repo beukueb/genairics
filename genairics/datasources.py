@@ -70,7 +70,7 @@ Providers: `file`, `basespace`, `ena`, `rsync`
             )
             enasource.run()
         elif provider == 'test':
-            testsource = TestSource(
+            testsource = SimulatedSource(
                 testCharacteristics = location,
                 **self.projectSetupParams
             )
@@ -218,21 +218,94 @@ class ENAsource(luigi.Task):
         os.rename(outtempdir,self.output().path)
 
 # Simulated test data
-@inherits(setupProject)
-class TestSource(ProjectTask):
-    """Simulate data for testing pipelines
+@inherits(RetrieveGenome)
+class SimulatedSource(ProjectTask):
+    """Simulate data for testing pipelines, or comparing parameter settings.
     
     `location` parameter string needs to have the following structure:
-    TODO
+      - RNA -> RNA[/?coverage=20&replicates=3&maxtranscripts=100]
+      - DNA -> DNA[/?coverage=20&replicates=3]
     """
     testCharacteristics = luigi.Parameter('',description='characteristics of the simulated data')
 
+    def required_resources(self):
+        genome = self.clone(RetrieveGenome)
+        if not genome.complete(): genome.run()
+        return genome.output()
+    
     def output(self):
         return luigi.LocalTarget(self.projectdata)
 
     def run(self):
-        tmpdir = self.output().path+'_creating_test_data'
-        local['rsync']['-avz',self.remoteSource,tmpdir] & FG
+        import re
+        from urllib.parse import parse_qs
+        settingsregex = re.compile(
+            r'(?P<simultype>DNA|RNA)(?:/\?(?P<typesettings>\S*))?',
+            re.IGNORECASE
+        )
+        settings = settingsregex.match(self.testCharacteristics).groupdict()
+        if settings['simultype'].upper() == 'RNA':
+            # RNA transcript simulation
+            import gffutils, pyfaidx
+            from plumbum import local
+            from genairics import gscripts
+            genome = self.required_resources()
+            genome_fasta = glob.glob(os.path.join(genome.path,'dna/*.fa'))[0]
+            tmpdir = self.output().path+'_creating_test_data'
+
+            # RNA settings
+            RNAsettings = parse_qs(settings['typesettings'])
+            try:
+                coverage = int(RNAsettings['coverage'][0])
+            except KeyError: coverage = 20 # default value
+            try:
+                replicates = int(RNAsettings['replicates'][0])
+            except KeyError: replicates = 3 # default value
+            try:
+                maxtranscripts = int(RNAsettings['maxtranscripts'][0])
+            except KeyError: maxtranscripts = False # default value
+                
+            # transform func needed for ensembl gtf => see gffutils docs examples
+            def transform_func(x):
+                if 'transcript_id' in x.attributes:
+                    x.attributes['transcript_id'][0] += '_transcript'
+                return x
+            db = gffutils.create_db(
+                glob.glob(os.path.join(genome.path,'annotation/*.gtf'))[0],':memory:',
+                id_spec={'gene': 'gene_id', 'transcript': "transcript_id"},
+                merge_strategy = "create_unique",
+                transform = transform_func,
+                keep_order = True,
+                disable_infer_genes = True, # genes should already be in ensembl gtf
+                disable_infer_transcripts = True # transcripts should already be in esembl gtf
+            )
+            transcripts = db.features_of_type('transcript')
+            transcriptfilepath = os.path.join(self.projectresults,'metadata','transcripts.fa')
+            fasta = pyfaidx.Fasta(genome_fasta)
+            if maxtranscripts:
+                from itertools import count
+                tcount = count(0)
+            with open(transcriptfilepath, 'wt') as fout:
+                for trancript in transcripts:
+                    fout.write('>{}\n{}\n'.format(
+                        transcript.id,
+                        transcript.sequence(fasta)
+                    ))
+                    if maxtranscripts:
+                        i = next(tcount)
+                        if i >= maxtranscripts: break
+            
+            # R polyester for simulation
+            with local.env(R_MODULE="SET"):
+                local['bash'][
+                    '-l','-c', ' '.join(
+                        ['Rscript', gscripts % 'simpleDEvoom.R',
+                        transcriptfilepath, coverage, replicates, tmpdir]
+                )]()
+
+            # Transform polyester fasta to gzipped fastq
+        elif settings['simultype'].upper() == 'DNA':
+            raise NotImplementedError
         os.rename(tmpdir,self.output().path)
 
 # Raw data preprocessing
@@ -452,54 +525,4 @@ class SubsampleProject(luigi.Task):
                             gfout.writelines(lines)
         # renaming temporary outdir to final subdir
         os.rename(outdir,subdir)
-            
-@inherits(setupProject)
-@inherits(RetrieveGenome)
-class ENAtestSource(luigi.Task):
-    """
-    Downloads fastq's from given ENA accession number
-    """
-    def requires(self):
-        return [
-            self.clone(setupProject),
-            self.clone(RetrieveGenome)
-        ]
-
-    def run(self):
-        import requests
-        r = requests.get('https://www.ebi.ac.uk/ena/data/taxonomy/v1/taxon/scientific-name/{}'.format(
-            genome.replace('_','%20'))
-        )
-        taxID = r.json()[0]['taxId']
-        r = requests.get('https://www.ebi.ac.uk/ena/data/view/Taxon:{}&portal=read_experiment;display=xml'.format(taxID))
-        #https://www.ebi.ac.uk/ena/data/warehouse/search?query=%22cell_line=%22IMR-32%22%22&domain=sample
-        #https://www.ebi.ac.uk/ena/data/warehouse/search?query=%22geo_accession=%22GSE37599%22%22&domain=study
-        raise NotImplementedError
-    
-@inherits(setupProject)
-@inherits(RetrieveGenome)
-class SimulatedSource(luigi.Task):
-    def requires(self):
-        return [
-            self.clone(setupProject),
-            self.clone(RetrieveGenome)
-        ]
-
-    def run(self):
-        import gffutils
-        #transform func needed for ensembl gtf => see gffutils docs examples
-        def transform_func(x):
-            if 'transcript_id' in x.attributes:
-                x.attributes['transcript_id'][0] += '_transcript'
-            return x
-        db = gffutils.create_db(
-            glob.glob(os.path.join(self.input()[1].path,'annotation/*.gtf'))[0],':memory:',
-            id_spec={'gene': 'gene_id', 'transcript': "transcript_id"},
-            merge_strategy="create_unique",
-            transform=transform_func,
-            keep_order=True
-        )
-        transcripts = db.features_of_type('transcript')
-        #TODO work in progress
-        #get transcripts -> to fasta file -> then R polyester for simulation
-        raise NotImplementedError
+                
