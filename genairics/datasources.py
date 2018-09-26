@@ -27,6 +27,7 @@ class DataSource(ProjectTask):
         basespace://NSQRun => NSQRun identifier.
         ena://projectID => ENA project ID.
         rsync://remote/location => what you would use as source in rsync command
+        test://[species/[release/[genometype/]]](DNA|RNA)[?coverage=20&replicates=...]
     """
     source = luigi.Parameter('',
         description = '''Data location. Format should be [provider://]path
@@ -40,12 +41,18 @@ Providers: `file`, `basespace`, `ena`, `rsync`
 
     def run(self):
         import re
+        from plumbum import colors
         source_re = re.compile(r'^(?P<provider>\S+)://(?P<location>\S*)$')
         source_m = source_re.match(self.source)
         if source_m:
             provider, location = source_m.groups()
         else: # considered file location if no provider
             provider, location = 'file', self.source
+        # Log choice
+        self.print(
+            'Retrieving', colors.green | location,
+            'through', colors.green | provider
+        )
         # Data source cases:
         if provider == 'file':
             # In case the data is a local file path, the directory is linked to the datadir
@@ -70,8 +77,19 @@ Providers: `file`, `basespace`, `ena`, `rsync`
             )
             enasource.run()
         elif provider == 'test':
+            genome_re = re.compile(
+                r'(?:(?P<species>[a-z,A-Z,_,\-]+)/)?'+
+                r'(?:(?P<release>\d+)/)?'+
+                r'(?:(?P<genomeType>toplevel)/)?'+
+                '(?P<options>(?:DNA|RNA)\S*)',
+                re.IGNORECASE
+            )
+            genome_specs = genome_re.match(location).groupdict()
+            genome_specs = {k:genome_specs[k] for k in genome_specs if genome_specs[k]}
+            options = genome_specs.pop('options')
             testsource = SimulatedSource(
-                testCharacteristics = location,
+                testCharacteristics = options,
+                **genome_specs,
                 **self.projectSetupParams
             )
             testsource.run()
@@ -237,10 +255,10 @@ class SimulatedSource(ProjectTask):
         return luigi.LocalTarget(self.projectdata)
 
     def run(self):
-        import re
+        import re, gzip
         from urllib.parse import parse_qs
         settingsregex = re.compile(
-            r'(?P<simultype>DNA|RNA)(?:/\?(?P<typesettings>\S*))?',
+            r'(?P<simultype>DNA|RNA)(?:/?\?(?P<typesettings>\S*))?',
             re.IGNORECASE
         )
         settings = settingsregex.match(self.testCharacteristics).groupdict()
@@ -284,9 +302,9 @@ class SimulatedSource(ProjectTask):
             fasta = pyfaidx.Fasta(genome_fasta)
             if maxtranscripts:
                 from itertools import count
-                tcount = count(0)
+                tcount = count(1)
             with open(transcriptfilepath, 'wt') as fout:
-                for trancript in transcripts:
+                for transcript in transcripts:
                     fout.write('>{}\n{}\n'.format(
                         transcript.id,
                         transcript.sequence(fasta)
@@ -296,14 +314,41 @@ class SimulatedSource(ProjectTask):
                         if i >= maxtranscripts: break
             
             # R polyester for simulation
+            os.mkdir(tmpdir)
             with local.env(R_MODULE="SET"):
                 local['bash'][
                     '-l','-c', ' '.join(
-                        ['Rscript', gscripts % 'simpleDEvoom.R',
-                        transcriptfilepath, coverage, replicates, tmpdir]
+                        ['Rscript', gscripts % 'polyester_wrapper.R',
+                        transcriptfilepath, str(coverage), str(replicates), tmpdir]
                 )]()
 
             # Transform polyester fasta to gzipped fastq
+            for polfile in glob.glob(os.path.join(tmpdir,'*')):
+                polbase = os.path.basename(polfile)
+                if polbase.startswith('sim_'):
+                    # move sim metadata files to project metadata
+                    os.rename(
+                        polfile,
+                        os.path.join(self.projectresults,'metadata',polbase)
+                    )
+                else: #create gzip fq files
+                    sampledir = os.path.join(
+                        os.path.dirname(polfile),
+                        '_'.join(polbase.split('_')[:2])
+                    )
+                    if not os.path.exists(sampledir):
+                        os.mkdir(sampledir)
+                    polqfile = os.path.join(sampledir,polbase.replace('.fasta','.fastq.gz'))
+                    with gzip.open(polqfile,'wt') as fout:
+                        with open(polfile) as fin:
+                            for line in fin:
+                                if line.startswith('>'): fout.write('@'+line[1:])
+                                else:
+                                    fout.write(line)
+                                    fout.write('+\n')
+                                    fout.write('~'*(len(line)-1)+'\n')
+                    os.unlink(polfile)
+                                    
         elif settings['simultype'].upper() == 'DNA':
             raise NotImplementedError
         os.rename(tmpdir,self.output().path)

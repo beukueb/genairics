@@ -7,8 +7,8 @@ library(Biostrings)
 args = commandArgs(trailingOnly = T)
 print(args)
 transcriptfile = args[1]
-coverage = args[2]
-replicates = args[3]
+coverage = as.integer(args[2])
+replicates = as.integer(args[3])
 outdir = args[4]
 
 # Processing
