@@ -21,7 +21,7 @@ from genairics.datasources import BaseSpaceSource, mergeSampleFASTQs
 from genairics.resources import resourcedir, RetrieveGenome, Bowtie2Index, RetrieveBlacklist
 
 ### per sample subtasks
-from genairics.RNAseq import sampleQualityCheck, cutadaptConfig, cutadaptSampleTask
+from genairics.RNAseq import sampleQualityCheck, cutadaptConfig, cutadaptSampleTask, mergeQualityChecks
 
 #subsampleTask => subsampling naar 30 miljoen indien meer
 

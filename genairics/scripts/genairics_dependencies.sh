@@ -115,6 +115,16 @@ if ! command -v STAR; then
     fi
 fi
 
+## SPAdes
+#http://cab.spbu.ru/files/release3.12.0/manual.html
+if ! command -v spades.py; then
+    cd $GAX_REPOS
+    wget http://cab.spbu.ru/files/release3.12.0/SPAdes-3.12.0-Linux.tar.gz
+    tar -xzf SPAdes-3.12.0-Linux.tar.gz
+    rm SPAdes-3.12.0-Linux.tar.gz
+    ln -s $GAX_REPOS/SPAdes-3.12.0-Linux/bin/spades.py $GAX_PREFIX/bin/spades.py
+fi
+
 ## Quality control tools
 ### BamQC
 if ! command -v bamqc; then
