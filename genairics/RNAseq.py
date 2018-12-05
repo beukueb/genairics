@@ -194,8 +194,8 @@ class coverageConfig(luigi.Config):
     normalizeTo1x = luigi.IntParameter(
         default=0,
         description="""
-        bamCoverage normalization option. If not provided will default to --normalizeUsingRPKM.
-        Else int needs to be provided of genome size to pass to --normalizeTo1x,
+        bamCoverage normalization option. If not provided will default to `--normalizeUsing RPKM`.
+        Else int needs to be provided of genome size to pass to --effectiveGenomeSize and --normalizeUsing RPGC,
         e.g. 2451960000 for human genome.
         """
     )
@@ -230,7 +230,10 @@ class coverageTask(luigi.Task):
             with local.env(PYTHONPATH=''):
                 stdout = local['bamCoverage'](
                     '-p', str(config.threads),
-                    *(('--normalizeTo1x',self.normalizeTo1x) if self.normalizeTo1x else ('--normalizeUsingRPKM',)),
+                    *(
+                        ('--normalizeUsing','RPGC','--effectiveGenomeSize',self.normalizeTo1x)
+                        if self.normalizeTo1x else ('--normalizeUsing','RPKM',)
+                    ),
                     #'--extendReads', #TODO make possible for both single/paired end
     		    '-b', bamfile, '-o', bwfile 
                 )
