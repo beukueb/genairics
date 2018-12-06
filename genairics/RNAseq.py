@@ -215,12 +215,12 @@ class coverageTask(luigi.Task):
             # Rename bam before processing
             bwfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bw')
             bamfile = os.path.join(self.outfileDir,'Aligned.sortedByCoord.out.bam')
-            bamfileOriginal = os.path.join(self.outfileDir,'Aligned.sortedByCoord.unsorted.bam')
-            os.rename(bamfile,bamfileOriginal)
+            #bamfileOriginal = os.path.join(self.outfileDir,'Aligned.sortedByCoord.unsorted.bam')
+            #os.rename(bamfile,bamfileOriginal)
     
-            # Sort
-            stdout = local['samtools']('sort', '-o', bamfile, bamfileOriginal)
-            logger.info(stdout)
+            # Sort => should already be sorted
+            #stdout = local['samtools']('sort', '-o', bamfile, bamfileOriginal)
+            #logger.info(stdout)
     
             # Index
             stdout = local['samtools']('index', bamfile)
