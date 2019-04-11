@@ -194,7 +194,8 @@ fi
 ## MACS2
 if ! command -v macs2; then
     virtualenv --python=python2.7 $GAX_ENVS/macs2_env
-    PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install numpy MACS2 --prefix=$GAX_ENVS/macs2_env
+    PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install numpy --prefix=$GAX_ENVS/macs2_env
+    PYTHONPATH= $GAX_ENVS/macs2_env/bin/pip install MACS2 --prefix=$GAX_ENVS/macs2_env
     ln -s $GAX_ENVS/macs2_env/bin/macs2 $GAX_PREFIX/bin/macs2
 fi
 

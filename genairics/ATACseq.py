@@ -195,7 +195,7 @@ class PeakCallingTask(luigi.Task):
     normalizeTo1x = luigi.IntParameter(
         default=0,
         description="""
-        MACS2 normalization option. If not provided will default to --normalizeUsingRPKM.
+        MACS2 normalization option. If not provided will default to normalize using RPKM.
         Else int needs to be provided of genome size to pass to --normalizeTo1x,
         e.g. 2451960000 for human genome.
         """
@@ -236,7 +236,10 @@ class PeakCallingTask(luigi.Task):
             with local.env(PYTHONPATH=''):
                 stdout = local['bamCoverage'](
                     '-p', str(config.threads),
-                    *(('--normalizeTo1x',self.normalizeTo1x) if self.normalizeTo1x else ('--normalizeUsingRPKM',)),
+                    *(
+                        ('--normalizeUsing','RPGC','--effectiveGenomeSize',self.normalizeTo1x)
+                        if self.normalizeTo1x else ('--normalizeUsing','RPKM',)
+                    ),
                     #'--extendReads', #TODO make possible for both single/paired end
 		    '-b', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam"),
 		    '-o', os.path.join(sampleFile,"Filtered.sortedByCoord.minMQ4.bam")[:-3]+'coverage.bw' 
