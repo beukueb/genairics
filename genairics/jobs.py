@@ -81,7 +81,7 @@ class SlurmJob(luigi.Task):
         machine = SshMachine(self.remote) if self.remote else local
         #TODO put this logic in function for different job classes to use
         #but will need option for either to env or to args at end of commandline
-        jobvariables = []
+        jobvariables = [self.job.task_family]
         jobparameters = dict(self.job.get_params())
         for n in self.job.get_param_names():
             v = self.job.__getattribute__(n)
