@@ -65,37 +65,47 @@ class SlurmJob(luigi.Task):
     """
     Delegate the job to slurm scheduler.
     """
-    job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a qsub job')
+    job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a slurm job')
     resources = luigi.DictParameter(
-        default = {'walltime':'20:00:00','nodes':config.nodes, 'ppn':config.threads},
-        description = 'the resources that will be asked by the qsub job'
+        default = {
+            'walltime': '20:00:00', 'memory': '32G',
+            'nodes': config.nodes, 'ppn': config.threads
+            },
+        description = 'the resources that will be asked by the slurm job'
     )
     remote = luigi.Parameter('', description='provide ssh config remote name, if job is to be submitted remotely')
     clusterPPN = luigi.IntParameter(config.threads, description='Processors per node to request')
-    clusterQ = luigi.Parameter('', description='provide queue@server to specify queue and/or server where job will be submitted')
+    clusterQ = luigi.Parameter('', description='provide partition@server to specify partition and/or server where job will be submitted')
 
     def run(self):
         machine = SshMachine(self.remote) if self.remote else local
         #TODO put this logic in function for different job classes to use
         #but will need option for either to env or to args at end of commandline
+        jobvariables = []
         jobparameters = dict(self.job.get_params())
         for n in self.job.get_param_names():
             v = self.job.__getattribute__(n)
-            if isinstance(v,bool):
+            if n == 'project':
+                project = v
+            elif isinstance(v,bool):
                 if jobparameters[n]._default != v:
-                    jobvariables.append('{}={}'.format(n,v))
+                    jobvariables.append('--{}'.format(n))
             elif v:
-                jobvariables.append('{}={}'.format(n,v))
-        qsub = machine['qsub'][(
-            '-l','walltime={}'.format(self.resources['walltime']),
-            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.clusterPPN),)+
-            (('-q',self.clusterQ) if self.clusterQ else ())
+                jobvariables.append('--{}'.format(n))
+                #TODO check next line for qsub job .. prevents arg with spaces breaking up
+                jobvariables.append(('"'+v+'"') if isinstance(v,str) and ' ' in v else v)
+        jobvariables.append(project)
+        sbatch = machine['sbatch'][(
+            '--nodes', str(self.resources['nodes']),
+            '-c', str(self.clusterPPN),
+            '--mem', self.resources['memory'],
+            '--time', self.resources['walltime'],)+
+            (('--partition',self.clusterQ) if self.clusterQ else ())
         ]
-        qsubID = qsub(
-            '-v',','.join(jobvariables),machine['genairics']
+        sbatchID = sbatch(
+            machine['genairics'], *jobvariables
         )
-        sbatch = local['sbatch']
-        sbatch(*args)
+        print(sbatchID)
         if self.remote: machine.close()
             
 def DockerJob(args):
