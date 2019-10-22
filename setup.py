@@ -32,7 +32,7 @@ setup(name = package,
           'genairics': [
               'scripts/genairics_dependencies.sh',
               'scripts/buildRSEMindex.sh',
-	      'scripts/qualitycheck.sh',
+              'scripts/qualitycheck.sh',
               'scripts/simpleDEvoom.R',
               'templates/index.html',
               'static/js/main.js'

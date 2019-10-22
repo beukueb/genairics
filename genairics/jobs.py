@@ -14,7 +14,6 @@ from genairics import logger, config
 class QueuJob(luigi.Task):
     """
     Submits a pipeline as a qsub job.
-    #TODO give option to wait until job finishes and print job stdout and stderr to console
     """
     job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a qsub job')
     resources = luigi.DictParameter(
@@ -62,6 +61,43 @@ class QueuJob(luigi.Task):
         machine['touch'](self.output()[1].path)
         if self.remote: machine.close()
 
+class SlurmJob(luigi.Task):
+    """
+    Delegate the job to slurm scheduler.
+    """
+    job = luigi.TaskParameter(description = 'the pipeline that will be submitted as a qsub job')
+    resources = luigi.DictParameter(
+        default = {'walltime':'20:00:00','nodes':config.nodes, 'ppn':config.threads},
+        description = 'the resources that will be asked by the qsub job'
+    )
+    remote = luigi.Parameter('', description='provide ssh config remote name, if job is to be submitted remotely')
+    clusterPPN = luigi.IntParameter(config.threads, description='Processors per node to request')
+    clusterQ = luigi.Parameter('', description='provide queue@server to specify queue and/or server where job will be submitted')
+
+    def run(self):
+        machine = SshMachine(self.remote) if self.remote else local
+        #TODO put this logic in function for different job classes to use
+        #but will need option for either to env or to args at end of commandline
+        jobparameters = dict(self.job.get_params())
+        for n in self.job.get_param_names():
+            v = self.job.__getattribute__(n)
+            if isinstance(v,bool):
+                if jobparameters[n]._default != v:
+                    jobvariables.append('{}={}'.format(n,v))
+            elif v:
+                jobvariables.append('{}={}'.format(n,v))
+        qsub = machine['qsub'][(
+            '-l','walltime={}'.format(self.resources['walltime']),
+            '-l','nodes={}:ppn={}'.format(self.resources['nodes'],self.clusterPPN),)+
+            (('-q',self.clusterQ) if self.clusterQ else ())
+        ]
+        qsubID = qsub(
+            '-v',','.join(jobvariables),machine['genairics']
+        )
+        sbatch = local['sbatch']
+        sbatch(*args)
+        if self.remote: machine.close()
+            
 def DockerJob(args):
     """
     Submits a pipeline to be run in the genairics docker container.

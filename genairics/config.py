@@ -73,7 +73,10 @@ def saveConfig(configs):
     or - if not provided - in 'luigi.cfg' in current working directory
     """
     if type(configs) != list: configs = [configs]
-    with open(os.environ.get('LUIGI_CONFIG_PATH','luigi.cfg'),'wt') as outconfig:
+    with open(os.environ.get(
+        'LUIGI_CONFIG_PATH',
+        os.path.expanduser('~/luigi.cfg')),'wt'
+                  ) as outconfig:
         for config in configs:
             outconfig.write('[{}]\n'.format(config.get_task_family()))
             for param in config.get_param_names():

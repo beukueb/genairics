@@ -11,7 +11,7 @@ def prepareParser():
     import argparse
     from collections import OrderedDict
     from genairics import typeMapping, config
-    from genairics.jobs import QueuJob
+    from genairics.jobs import QueuJob, SlurmJob
     from genairics.RNAseq import RNAseq
     from genairics.ChIPseq import ChIPseq
     from genairics.ATACseq import ATACseq
@@ -33,7 +33,8 @@ def prepareParser():
 
     joblaunchers = OrderedDict((
         ('native', None),
-        ('qsub', QueuJob)
+        ('qsub', QueuJob),
+        ('slurm', SlurmJob)
     ))
     
     parser = argparse.ArgumentParser(
