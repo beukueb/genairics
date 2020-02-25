@@ -139,6 +139,10 @@ class BaseSpaceSource(luigi.Task):
         return luigi.LocalTarget('{}/{}'.format(self.datadir,self.project))
     
     def run(self):
+        if os.path.exists(self.output().path):
+            print('folder already downloaded')
+            return
+        
         import requests, tempfile
         logger = logging.getLogger(__package__)
 
