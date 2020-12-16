@@ -106,12 +106,12 @@ fi
 ## STAR
 if ! command -v STAR; then
     cd $GAX_REPOS
-    wget https://github.com/alexdobin/STAR/archive/2.6.1d.tar.gz
-    tar -xzf 2.6.1d.tar.gz
+    wget https://github.com/alexdobin/STAR/archive/2.7.6a.tar.gz
+    tar -xzf 2.7.6a.tar.gz
     if [[ $OSTYPE == *"darwin"* ]]; then
-	ln -s $GAX_REPOS/STAR-2.6.1d/bin/MacOSX_x86_64/STAR $GAX_PREFIX/bin/STAR
+	ln -s $GAX_REPOS/STAR-2.7.6a/bin/MacOSX_x86_64/STAR $GAX_PREFIX/bin/STAR
     else
-	ln -s $GAX_REPOS/STAR-2.6.1d/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
+	ln -s $GAX_REPOS/STAR-2.7.6a/bin/Linux_x86_64_static/STAR $GAX_PREFIX/bin/STAR
     fi
 fi
 

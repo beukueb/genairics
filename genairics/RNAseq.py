@@ -514,8 +514,8 @@ class PCAplotCounts(luigi.Task):
             n_quantiles = 100,
             random_state = 0
         )
-        X_norm = quantile_transformer.fit_transform(counts.T.as_matrix())
-        #X_scaled = preprocessing.scale(counts.as_matrix())
+        X_norm = quantile_transformer.fit_transform(counts.T.values)
+        #X_scaled = preprocessing.scale(counts.values)
         #X_norm = (X - X.min())/(X.max() - X.min())
         # Transform counts
         X_tran = np.log(X_norm + abs(X_norm.min()) + 1)
